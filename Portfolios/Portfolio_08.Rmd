@@ -1,0 +1,83 @@
+---
+title: "Portfolio_08"
+author: "John Lavack 20001249"
+date: "2026-05-18"
+output: html_document
+---
+
+
+```{r setup, include=TRUE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.width = 8,    
+  fig.height = 6, 
+  fig.align = "center"
+)
+
+library(tidyverse)
+library(sjPlot)
+
+data <- read.csv("https://R-Resources.massey.ac.nz/161228/PortfolioTasks/Seagrass2649.csv") %>%
+  mutate(clarity = as.factor(clarity),
+         disturb = as.factor(disturb),
+         nitrogen = as.factor(nitrogen))
+
+data %>% head(10)
+```
+
+# Fit a full model
+
+Looking at the model fit as per the instructions, there are no significant terms. Low clarity is very weakly significant, at 0.1, or 10% alpha error. Above the standard 0.05 P value cut off. From this summary, there are no significant predictors in the data for the prevalence of sea grass meadows.
+
+Note: I do not include the replications variable in the model in order to avoid incorrect inferences from using a glm() model instead of a glmr() model. The latter not covered in class. 
+
+```{r model fit}
+model <- glm(seagrass ~ disturb + clarity * nitrogen , data = data, family = binomial(link = 'logit'))
+
+summary(model)
+```
+Checking the residual deviation: with 5% level of significance, the critical value from the chi squared distribution with 72 degrees of freedom is:
+
+```{r chisq test}
+qchisq(0.95, 72)
+```
+
+As 92.8 is smaller than the null deviance of 102.6, we have evidence that the model could be better. I.e. it isn't a great fit, but this in known by the lack of any significant terms. 
+
+A quick look at the residuals show a bow-tie pattern in the scale and location plot and downward linear trend in the residuals vs fitted plot. The bow-tie shape isn't an issue for logistic regression, it shows the binary nature of the residuals. It is expected. However, the downward trend suggests model misspecification. Perhaps the model is over predicting at high fitted values and under predicting at low ones. Given the model summary above, where no significant terms are identified, this misspecification is not surprising. 
+
+```{r residuals}
+plot(model)
+```
+
+
+
+# Graph of findings:
+
+```{r findings graph}
+plot_model(model, type = "pred", terms = c('disturb', 'clarity', 'nitrogen'), ci.lvl = 0.95) + 
+  labs(y = "Prob(Seagrass)", 
+       title = 'Predicited probabilites of seagrass.',
+       subtitle = 'Sub plots show nitrogen levels')
+
+```
+
+# Results description:
+
+The results of the experiment given the data collected about the experimental units are that no factor levels of water clarity, dissolved nitrogen nor physical disturbance has any impact on the presence of seagrass.  
+
+This can be seen in the above plot, where in a high dissolved nitrogen environment, under both conditions of disturbance, and clarity, the probability of observing seagrass is not significantly different between factor levels. The 95% confidence intervals in high nitrogen environments overlap at both disturbance levels for clarity; high clarity's lower 47.5% overlaps with low clarity's upper 47.5% confidence interval. While at low nitrogen levels the group differences overlap almost completely. 
+Therefore, this experiment has identified that under the conditions chosen, at the factor levels chosen, there is no difference in the presence of seagrass between groups.  
+
+High or low water clarity has no impact of seagrass presence.  
+
+Dissolved nitrogen at levels 5µmol/L and 20µmol/L have no impact of seagrass presence. 
+
+Disturbance in the water by dropping a 5kg weight on the seagrass once a week or once daily has no impact on seagrass. 
+
+Nor does the interaction of clarity and nitrogen.  
+
+
+
+
+

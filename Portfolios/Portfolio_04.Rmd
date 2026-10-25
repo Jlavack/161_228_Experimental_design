@@ -1,0 +1,138 @@
+---
+title: "Portfolio_04"
+author: "John Lavack 20001249"
+date: "2026-03-12"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  fig.width = 8,    
+  fig.height = 6, 
+  fig.align = "center"
+)
+
+library(tidyverse)
+library(emmeans)
+
+wine <- read.csv("https://R-Resources.massey.ac.nz/161228/PortfolioTasks/Wine2649.csv") %>% 
+  mutate(Yeast = factor(Yeast, levels = c("Commercial", "Heritage")), 
+         Nutrient = factor(Nutrient, levels= c("None", "Added")))
+```
+
+# 1. Fit the model
+At first glance it appears that adding yeast to the wine aids the fermentation of alcohol. They seem tp achieve a higher alcohol level, but there is some impact from the wine sweetness as measured in brix. 
+
+```{r initial plot}
+wine %>% mutate(Interaction = interaction(Yeast, Nutrient)) %>%
+  ggplot(aes(y = ABV, x= Brix, col = Interaction))  + 
+  geom_smooth(alpha = 0.2, method = 'loess', linewidth = 0.1, linetype = 'dashed') + 
+  geom_smooth(alpha = 0.2, method = 'lm', linewidth = 0.1, ) + 
+  geom_point() + 
+  theme_minimal() + facet_wrap("Yeast")
+```
+
+
+Fitting a model with no interaction term and no covariate shows no significant difference between the groups for either treatment appled. 
+
++ Yeast: $F value = 2$, $p = 0.16$.
++ Nutrient $F value = 1.95$, $p = 0.17$.
+
+```{r model 0}
+Wine.lm0 <- lm(ABV ~ Yeast + Nutrient, data = wine)
+anova(Wine.lm0)
+```
+
+Similarly a model with an interaction term and no covariate show no significant difference between groups. 
+
++ Yeast: $F value = 2$, $p = 0.16$.
++ Nutrient $F value = 1.95$, $p = 0.17$.
++ Interaction $F value = 1.07$, $p = 0.31$.
+
+```{r model 1}
+Wine.lm1 <- lm(ABV ~ Yeast * Nutrient, data = wine)
+anova(Wine.lm1)
+```
+
+Fitting a model with the covariate and no interaction term shows significant group differences with both treatments and the brix measure. Weakly significant for nutrients. 
+
++ Brix $F value = 386$, $p ~ 2.2e-16$.
++ Yeast: $F value = 31.7$, $p = 5.019e-06$.
++ Nutrient $F value = 3.36$, $p = 0.08$.
+
+```{r model 2}
+Wine.lm2 <- lm(ABV ~ Brix + Yeast + Nutrient, data = wine)
+anova(Wine.lm2)
+```
+
+Finally, fitting a model with the covariate and an interaction term does not show a significant difference between the interaction of treatments between groups. 
+
++ Brix $F value = 374$, $p ~ 2.2e-16$.
++ Yeast: $F value = 30.7$, $p = 7.224e-06$.
++ Nutrient $F value = 3.25$, $p = 0.08$.
++ Interaction $F value = 0.14$, $p = 0.7$.
+```{r model 3}
+Wine.lm3 <- lm(ABV ~ Brix + Yeast * Nutrient, data = wine)
+anova(Wine.lm3)
+```
+
+The experiment data indicates that there is significant impact on alcohol content between groups caused by the brix (covariate) measurement of the wine and both treatments, but no evidence for a significant impact on alcohol content caused by the interaction between the treatments. Therefore the model used for the analysis will be the model with brix, nutrients and yeast, but no interaction. 
+
+
+
+# 2. Residual analysis
+
+The residuals of the selected model appear to pass the assumptions of a linear model. 
+Therefore the model is correctly specified. 
+The residual vs fitted plot shows a more or less horizontal trend. Validating the linearity assumption. 
+In the residuals vs fitted and scale and location plots the randomly distributed residuals with no funneling indicate homoscedasticity. Validating the assumption of equal variance.  
+The QQ plot seems to indicate normally distributed residuals. There is some departure towards the top end of the plot, but this is not major and could be an artefact of random noise in the data. 
+
+```{r residual anlaysis}
+plot(Wine.lm2)
+```
+
+
+# 3. Conclusions
+
+There is significant evidence to support that adding yeast of either commercial or heritage type alters alcohol content. However, there is a covariate effect caused by the initial sweetness of the unfermented grape juice as measured in brix. 
+Adding commercial yeast with no additional nutrients (the intercept) has alcohol content of 2.55 ABV.
+Using heritage yeast decreases ABV by 0.57 per unit per increase in brix of the starting juice relative to the mean ABV. 
+Adding nutrients increase the ABV by 0.19 per unit increase in brix of the starting juice. 
+As can be seen in the plot below, the use of heritage yeast results in lower ABV relative to the mean of the data (dashed black line), while adding nutrients to either yeast type increase ABV (green and purple lines). 
+
+
+```{r model summary}
+summary(Wine.lm2)
+```
+
+```{r final plot}
+ABV_mean <- wine %>% select(ABV, Brix)
+
+ggplot(data = ABV_mean, aes(y = ABV, x = Brix)) + 
+  geom_smooth(data = ABV_mean, col = 'black', alpha = 0, method = 'lm', linetype = 'dashed') +
+  geom_smooth(data = wine, aes(y = ABV, x = Brix, col = Yeast:Nutrient), method = 'lm', alpha = 0.2) + 
+  geom_point(data = wine, aes(y = ABV, x = Brix, col = Yeast:Nutrient)) +
+  labs(title = 'Wine ABV as yeast and nutrients treatments change')
+```
+
+
+There is significant differences between the groups of treatments on the ABV as shown below. Commercial yeast with added nutrients has a higher mean ABV of 13.9 with an interval from 13.7 to 14.1 at 95% confidence. This is the combination of treatments that result in higher ABV regardless of juice's starting brix level. 
+In general, adding commercial yeast increases ABV irrespective of nutrients. Adding yeast nutrient increases ABV irrespective of yeast type. Using 
+And, in general, higher brix results in higher ABV under all treatments.
+
+```{r emeans plot}
+plot(emmeans(Wine.lm2, ~ Yeast + Nutrient), adjust = "tukey")
+
+```
+
+
+
+# 4. Tabluated data
+```{r tabulation}
+summary(emmeans(Wine.lm2, pairwise ~ Yeast + Nutrient))
+```
+
+
+

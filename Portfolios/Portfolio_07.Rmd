@@ -1,0 +1,107 @@
+---
+title: "Portfolio_07"
+author: "John Lavack 20001249"
+date: "2026-05-10"
+output: html_document
+---
+
+
+```{r setup, include=TRUE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.width = 8,    
+  fig.height = 6, 
+  fig.align = "center"
+)
+
+library(tidyverse)
+
+data <- read.csv("https://R-Resources.massey.ac.nz/161228/PortfolioTasks/MarineFouling2649.csv") %>%
+  mutate(trial = as.factor(trial),
+         richness = as.factor(richness),
+         open_space = as.factor(open_space))
+
+data %>% head(10)
+```
+
+# Fit Models
+
+
+```{r}
+model1 <- glm(settlers ~ richness + trial, family = poisson(link = 'log'), data = data)
+
+anova(model1)
+
+```
+
+
+```{r}
+model2 <- glm(settlers ~ open_space + trial, family = poisson(link = 'log'), data = data)
+
+anova(model2)
+
+```
+
+
+# Compare models
+Because the models are not nested, the anova() function is not applicable here. We can look at their deviance individually, but they can't be compared using the anova() function. Both models have the same degrees of freedom for their residual deviance. For 87 degrees of freedom at P = 0.05, the residual deviance needs to be lower than:
+```{r}
+qchisq(0.95, 85)
+```
+
+Model 1 has a residual deviance of 335.5. This is larger than the target of 107.52. We have evidence that we can do better than model 1. 
+
+```{r}
+summary(model1)
+```
+<br> 
+<br> 
+
+Model 2 has 467.11 residual deviance. We can do better than model2. Model 1 has a lower residual deviance, therefore it is the better model of the two. Though not a complete model in any respect. 
+```{r}
+summary(model2)
+```
+<br>  
+
+Lastly, we can compare the AIC. This will show the same outcome, that model 1 is a better model than model2 for explaining the level of settlers. $AIC = 654.68 < 786.27$
+
+
+```{r}
+AIC(model1, model2)
+```
+
+
+Note: In this situation I think it would be better to include trial as a random effect as this can impact the observations with difference between trials such as larval availability, water flow, temp and other differences between deployments of plates. However, glm() doesn't cater to this and we haven't covered this in lectures. Given that I don't want to be falsely picked up for AI use, I will not use glmr() from the lme4 package. The outcome of the analysis in this portfolio won't change. The glmr() model for richness has AIC 666, while the open_space model has AIC 799. 
+
+The models would be:
+model3 <- lme4::glmer(settlers ~ richness  + (1 | trial), family = poisson(link = 'log'), data = data)
+model4 <- lme4::glmer(settlers ~ open_space + (1 | trial), family = poisson(link = 'log'), data = data)
+
+<br>
+<br>  
+
+# Graph
+
+```{r}
+data$Predicted <- model1$fitted.values
+
+d <- data %>% group_by(richness) %>% summarise(mean = mean(Predicted))
+
+ggplot(data = data) +
+  geom_point(aes(x = richness, y = settlers, color = "Observed")) +
+  geom_point(aes(x = richness, y = Predicted, color = "Predicted")) +
+  geom_line(data = d, aes(x = richness, y = mean, color = "Predicted"), group = 1) +
+  scale_color_manual("Key", values = c("Predicted" = "red", "Observed" = "black")) + 
+  labs(y = 'Settlers', x = 'Richness', title = "Poisson model prediction of settlers by species richness") +
+  theme_minimal()
+```
+
+
+# Results
+
+These results show that species richness is a better predictor of settlers than open space is, when using only one or the other in a simple model. 
+As starting species richness increases on the plate, the number of settlers reduces. 
+
+
+
+

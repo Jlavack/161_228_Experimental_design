@@ -1,0 +1,214 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+author: "Staff member responsible for this workshop: Jonathan Godfrey a.j.godfrey@massey.ac.nz"
+date: "last updated 04 March 2025"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and images.
+- Before you proceed, test the template works for you, and fix any errors.
+
+
+```{r}
+
+```
+
+# Practical Exercise: Two Factor Designs - Spatulas and Arousal 
+
+This exercise is useful for the following courses:
+
+- 161.222;
+- 161.251;
+- 228.371;
+- and general revision on regression and experimental design topics.
+
+## Aims of this practical exercise
+
+
+In this exercise you will:
+
+- Fit a model to two factors with or without a blocking variable
+- Interpret interactions
+- Check model assumptions
+
+
+## Before you undertake this exercise...
+
+Let's load the packages we will need.
+
+
+``` {r}
+library(tidyverse)
+library(emmeans)
+library(s20x)
+```
+
+## Two factor experiments
+
+Often, the measured outcome of our experiment depends on more than one factor. When things are simple, these effects are simply additive, and we can study the impact of one factor independent of the other.
+
+But what happens when one factor changes the effect of another? Medical scientists were surprised to discover in the 1990s that drinking grapefuit juice changes the effect of a range of drugs, including birth control. These sorts of interactions are common, and can have fatal consequences if we don't take them into account.
+
+It is important in these cases to measure the effects of both factors at the same time, and to be able to estimate the interaction between them. If we find no evidence of an interaction, we can proceed with our normal interpretation just like one-way analyses. If we do find an interaction, we need to explore how the two variables relate, often interpreting one within each level of the other.
+
+Lets look at two examples.
+
+### Spatula data
+
+This study looks at a range of factors influencing how ergonomically efficient a spatula feels. The study explores the effect of handle length and lift angle on food-shovelling performance to transfer 2000g of green beans from the pan to a plate, measured in seconds.
+
+Eight people were tested using 16 different culinary spatulas, with four different handle lengths (20, 25, 30 and 35cm) and four different lift angles (15°, 25°, 35° and 45°).
+
+We are interested in the effects of Length and Angle, but we must take care that the individual subjects in the study may influence our response. The people are the blocking factor; an issue to be discussed in a lecture very soon.
+
+Lets take a look at the data:
+
+
+``` {r}
+Spatula<-read.csv("https://R-Resources.massey.ac.nz/reworked/WuHsieh2002.csv") |> 
+glimpse()
+```
+
+We can see R is interpreting our factors as integers. Let's convert them to factors before we proceed.
+
+
+``` {r}
+Spatula <- Spatula |>
+  mutate(across(c(Length:Subject), factor))
+```
+
+### Visualise the data
+
+We should look at our data first. 
+
+``` {r}
+Spatula_by_angle<-Spatula |>
+  group_by(Length,Angle) |>
+  summarise(mean_Shoveltime=mean(ShovelTime), .groups = 'drop')
+
+ggplot(data=Spatula,aes(x=Length,y=ShovelTime,group=interaction(Angle,Subject),colour=Angle)) + 
+  geom_line() +
+  geom_line(data=Spatula_by_angle,aes(x=Length,y=mean_Shoveltime,group=Angle,colour=Angle),lwd=2)
+```
+
+We can see that there are some broad trends (i.e. the shovel time seems to go upwards as length increases), but there is considerable variation between subjects.
+
+We'd like to fit a linear model, allowing for an interaction between our treatments, but no interaction with any blocking variables. We can allow for interactions in R by putting an asterisk `*`  between those variables. Any other variables we can add with a plus `+`.
+
+For example:
+
+```[r eval=FALSE}
+my.lm <- lm(Response~Blocking+TreatmentA*TreatmentB,data=mydata)
+anova(my.lm)
+```
+
+**Try fitting a linear model to the spatula data**
+```{r}
+library(tidyverse)
+library(broom)
+spatula.lm <- lm(ShovelTime ~ Subject + Length * Angle, data = Spatula)
+tidy(summary(spatula.lm))
+
+tidy(anova(spatula.lm))
+```
+
+
+What do we conclude about an interaction between `Length` and `Angle`?
+
+Answer: THe interaction term is not significant ay p value 0.05. 
+
+What can we conclude about the main effects of `Length` and `Angle`?
+
+individually, each is significant. With miniiscule P values. 
+Linear model assumptions seem to be met. 
+
+```{r}
+plot(spatula.lm)
+```
+
+```{r}
+library(car)
+
+residualPlots(spatula.lm)
+
+library(GGally)
+
+
+
+pairs(cbind(spatula.lm$residuals, Spatula[, c("Subject", "Length", "Angle")]), 
+      main = "Residuals vs. Predictors (Pairs Plot)",
+      labels = c("Residuals", "Subject", "Length", "Angle"))
+```
+```{r}
+tidy_model <- augment(spatula.lm)
+
+# Create a faceted plot of residuals vs. each predictor
+tidy_model %>%
+  pivot_longer(cols = c(Subject, Length, Angle), names_to = "predictor", values_to = "value") %>%
+  ggplot(aes(x = value, y = .resid)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  facet_wrap(~ predictor, scales = "free") +
+  labs(title = "Residuals vs. Predictors (Faceted)",
+       x = "Predictor Value",
+       y = "Residual") +
+  theme_bw()
+```
+
+
+Normally we would then proceed to look at the residuals, and check the validity of our ANOVA assumptions, and perform pairwise tests but for now lets take a look at a second dataset and what to do if we do have an interaction.
+
+## Pupil Dilation data
+
+The following data are from a study of 20 males and 20 females measuring the dilation of the pupil in response to being shown a range of images (a baby, a landscape, a naked male and a naked female).
+
+Unlike the previous dataset, we have no information on the subjects, so we will not be using blocking.
+
+
+```{r}
+data("arousal.df")
+glimpse(arousal.df)
+```
+
+Our data are correctly entered as factors, so lets take a look at the plot
+
+``` {r}
+arousal_by_picture_gender <- arousal.df |> 
+  group_by(picture,gender) |>
+  summarise(mean_arousal=mean(arousal), .groups = 'drop')
+
+ggplot(data=arousal_by_picture_gender) +
+  geom_line(aes(x=picture,y=mean_arousal,group=gender,colour=gender)) 
+```
+
+**Try fitting a linear model to the pupil dilation data to predict arousal using gender interacting with picture**
+
+
+Q: What can we conclude about the interaction between gender and picture?
+
+```{r}
+dilation.lm <- lm(arousal ~ gender * picture, data = arousal.df)
+anova(dilation.lm)
+```
+A: The interaction is significant with P value 2.2e-16 and F value of 2095
+
+Q: What can we conclude about the main effects of picture and gender?
+Nothing. The effects are dependent on one another. The picture interacts with the sex of the viewer to produce arousal. Because the interaction is significant, we can only copmare the first factor within each level of the second factor. Vice versa. ## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/practicals/TwoFactors-sols.html)

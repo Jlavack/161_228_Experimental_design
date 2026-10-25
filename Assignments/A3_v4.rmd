@@ -1,0 +1,560 @@
+---
+title: "A3_161228_2026_Bugs"
+output: html_document
+date: "`r Sys.Date()`"
+name: "John Lavack"
+Student_ID: "20001249"
+---
+
+```{r, warning = FALSE}
+library(readxl)
+library(factoextra)
+library(FactoMineR)
+library(tidyverse)
+library(viridis)
+library(GGally)
+library(patchwork)
+library(broom)
+library(knitr)
+```
+
+# Assignment 3 - Edible Insects
+
+## Info
+
+You are opening a new restaurant that will be serving bug-based food. To design your dishes you ran an experiment to assess consumer preference of 35 different insects. Using CATA (Check All That Apply), you gathered data from 300 people on liking, flavour, taste, texture, and pairing.
+
+The results of this experiment can be found in your individual data set (look for your student ID) in the assignment folder.
+
+In this assignment, you will produce a statistical report on the experiment's findings, and use this to decide what dishes to put on your menu for opening night.
+
+You should:
+
+* Read this entire assignment before starting so that you understand what is required of you.
+* Change the name of the file and the author details above so your work is identifiable.
+* Limit your thinking and working to what is covered within the course material.
+* think about what to show where (excessive or inappropriate plots/text will result in marks being lost).
+* provide justifications (e.g., Why you showed this data on this plot).
+* use non-statistical jargon to describe any plots/outputs that you show (e.g., this shows that spiders are delicious because...).
+* note any insights/anomalies/outstanding questions along the way.
+
+
+**The knitted document should show all code and outputs**.
+
+# Functions & prep
+
+```{r}
+# all sheets into a list. I can then call the df directly from the list rather than making extra dfs all over the place
+df_list <- excel_sheets("A3_20001249.xlsx") %>%
+  set_names() %>%
+  map(read_excel, path = "A3_20001249.xlsx")
+
+liking <- unlist(df_list$Liking[2])
+```
+
+
+```{r long format df}
+#making a long format dataframe for EDA with liking. This way things are going to be more simple to work with
+EDA_df <- cbind(df_list$Flavour) %>% pivot_longer(cols = -1, values_to = 'Score', names_to = 'Characteristic') %>% mutate(Measure = 'Flavour') %>%
+  rbind(
+    cbind(df_list$Taste) %>% pivot_longer(cols = -1, values_to = 'Score', names_to = 'Characteristic') %>% mutate(Measure = 'Taste') 
+  ) %>%
+  rbind(
+    cbind(df_list$Texture) %>% pivot_longer(cols = -1, values_to = 'Score', names_to = 'Characteristic') %>% mutate(Measure = 'Texture') 
+    ) %>%
+  left_join(df_list$Liking, by = 'insect') %>%
+  #adding in some extra columns for EDA
+  group_by(Characteristic) %>%
+  mutate(Score_diff_from_mean = Score - mean(Score), mean_score = mean(Score)) %>% ungroup()
+```
+
+```{r flavour summary table and corrplot function, warning=FALSE}
+summary_eda <- function(df, sheet) {
+  table <-broom::tidy(df_list[[sheet]][-1]) %>% knitr::kable()
+  print(table)
+  #I am going to do some code you probably won't like, because I am nesting functions within functions. I am doing this to avoid flooding the namespace with unnecessary objects out of the EDA. 
+  corrplot::corrplot(cor(cbind(df_list$Liking[-1], df_list[[sheet]][-1])), type = 'lower', 
+                     title = paste("Correlation plot for", sheet), mar = c(0, 0, 2, 0))
+}
+```
+
+```{r EDA function, fig.width=15, fig.height=15}
+eda_plots <- function(df, measure) {
+  #----- Top layer------
+  #column plot showing how many times a characteristic was the highest scored for an animal
+  col_plot <- df %>% filter(Measure == measure) %>%
+    group_by(insect) %>%                
+    slice_max(order_by = Score, n = 1, with_ties = FALSE) %>% # Pick top score per group
+    ungroup() %>%
+    count(Characteristic, sort = TRUE) %>%
+    ggplot(aes(y = Characteristic, x = n) ) + geom_col() +
+    labs(title = paste('Top Scoring', measure, 'by Insect')) +
+    theme_minimal()
+  
+  # see total score of characteristics for insects
+  total_char <- df %>% filter(Measure == measure) %>%
+    group_by(Characteristic) %>%
+    summarise(total = sum(Score), liking = mean(liking), .groups = 'drop') %>% arrange(desc(total)) %>%
+    ggplot(aes(x=total, y = Characteristic, color = total)) + 
+    geom_point(size = 2) + 
+    geom_segment(aes(xend=0), linewidth = 1) +
+    theme_minimal() +
+    labs(title = 'Total Scores by Characteristic', y = '') +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), legend.position='none',  axis.text.y = element_blank())
+  
+  #---- bottom layer------
+  #see which insect has the highest difference in overall score mean
+  total_insects <- df %>% filter(Measure == measure) %>% 
+    group_by(insect) %>%
+    summarise(diff = mean(Score_diff_from_mean), .groups = 'drop') %>%
+    mutate(insect = factor(insect, levels = unique(insect[order(diff, decreasing = FALSE)]))) %>%
+    ggplot(aes(x=diff, y = insect, color = diff)) + 
+    geom_point() + 
+    geom_segment(aes(xend=0)) +
+    geom_vline(xintercept = 0, col = 'black', linetype = "dashed") + 
+    scale_color_viridis_c(option = "inferno", direction = -1) + 
+    theme_minimal() +
+    labs(title = 'Insect Total Scores differnce from mean score', color = 'total difference', y = "") +
+    theme(legend.position = 'bottom')
+  
+  #heatmap showing the worksheet by insect with likness score on right y axis. 
+  heatmap <- df %>% filter(Measure == measure) %>% mutate(insect = factor(insect, levels = unique(insect[order(Score, decreasing = FALSE)]))) %>%
+    ggplot(aes(x = Characteristic, y = insect, fill = Score)) +
+      geom_tile(color = "white", linewidth = 0.5) + 
+      scale_fill_viridis_c(option = "inferno", direction = -1) + 
+      theme_minimal() +
+      theme(
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), 
+        panel.grid = element_blank()
+       ) +
+      labs(fill = "Score", title = paste("Insect", measure, "Scores"), x = "", y = "") +
+      coord_cartesian(clip = "off") +
+      theme(plot.margin = margin(5.5, 40, 5.5, 5.5), legend.position = 'bottom') 
+  
+  (col_plot | total_char) / (heatmap | total_insects) + 
+    plot_annotation(title = paste("Insect", measure, "EDA"),
+                    theme = theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+                    )
+}
+
+```
+
+```{r PCA analysis function}
+pca_analysis <- function(data, y, n_plots, n_rotations, measure) { #got to pass in the dataframe with insects dropped; df_list[['sheet']][-1], and y = unlist(df_list$Liking[2])  ## if time, come back and enhance this to calculate the PC cumsum cut off automatically, format the biplot output nicer and 
+  #1. do the PCA
+  pca <- prcomp(data)
+  
+  #2. Scree plot. This is how I get n_plots and n_rotations. I ran this many times. Rule of thumb I used was cumulative variation of 0.85%, take that number of PCs
+  table1 <- broom::tidy(pca, matrix = "pcs") %>%
+    mutate(cumulative = cumsum(percent))  %>% 
+    knitr::kable()
+  
+  scree_plot <- fviz_screeplot(pca)
+  
+  #3 loop to get the bi-plots. I pretty much only show three each time though. It is too much to show many more and explain each one. 
+  combos <- combn(1:n_plots, 2)
+  
+  bi_plot_list <- list()
+  
+  for (i in 1:ncol(combos)) {
+    x_axes = combos[1, i]
+    y_axes =  combos[2, i]
+    plot_name <- paste0("bi_plot_", i)
+    
+    bi_plot <- fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(x_axes, y_axes), 
+                col.ind = y, 
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = paste("PCA Biplot PCs", x_axes, "and", y_axes)) + 
+      coord_equal()
+    
+    bi_plot_list[[plot_name]] <- bi_plot
+  }
+  
+  #4 another loop to get the rotation table. I am going to do it a bit strange. I want a table with PCs along the top, and each value is a tibble of characteristics and value. This way I can see each PC's rotation comparatively. 
+  #I make the whole table, then just filter it to get the PCs I want. THen I pivot it and put the values into a comma separated value pairing, like a tibble (but not a tibble, but like a flattened tibble). 
+  pca_rotations <- broom::tidy(pca, matrix = "rotation") %>%
+    filter(PC %in% 1:n_rotations)
+  #show the table
+  rotation_table <- pca_rotations %>% 
+    arrange(PC, desc(value)) %>%
+    group_by(PC) %>%
+    mutate(rank = row_number()) %>%
+    ungroup() %>%
+    mutate(Loading = paste0(column,', ', round(value,2))) %>%
+    select(PC, rank, Loading) %>% 
+    pivot_wider(
+      names_from = PC, 
+      values_from = Loading,
+      names_prefix = "PC"
+    ) %>% select(-rank) %>%
+    knitr::kable()
+  
+   #5 show the loadings as a graph, from my portfolio 10:
+  load_plot <- pca_rotations %>% 
+    ggplot(aes(x=column, y = value, ymin = 0, ymax = value, col = as.factor(PC), group = as.factor(PC))) +
+    geom_linerange(position = position_dodge(width = 0.5)) +
+    geom_point(position = position_dodge(width = 0.5)) +
+    theme_minimal() +
+    labs(color= 'PC',
+         title = 'PC loadings',
+         x ='') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  
+  #6 assemble the plot
+  
+  final_plot <- (
+    scree_plot /  
+    ((bi_plot_list$bi_plot_1 | bi_plot_list$bi_plot_2 | bi_plot_list$bi_plot_3) + plot_layout(guides = "collect")) /
+    load_plot + 
+    plot_annotation(
+      title = paste("Insect", measure, "PCA Analysis"),
+      theme = theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+    ) +
+    plot_layout(
+      heights = c(1, 2, 1))
+  )
+  #store this all as an object to help call parts individually... otherwise I can't see the whole plot in markdown and have to knit each time. Nobody has time for that. 
+  return(list(
+    variance_table = table1, 
+    rotation_table = rotation_table,
+    plot = final_plot, 
+    pca_object = pca, 
+    bi_plots = bi_plot_list)
+  )
+}
+```
+
+## Your answers below here
+
+The resulting data can be read in with the following command (you need to change the file name to match that of your data).
+
+Note also that you will need to read in all five sheets (I recommend revisiting at the Plant Based Meat Alternatives lectures and lab if you get stuck), I have provided the code for the first two below:
+
+
+
+### Q1 - Exploratory Data Analysis (15 marks)
+*Explore the three data sets of texture, taste, and flavour individually.* 
+
+*Produce plots/summary statistics to support your exploration, and describe any key observations from each*
+
+
+#### Q1A - Insect Flavour 
+```{r flavour summary eda, warning = FALSE}
+summary_eda(df_list, 'Flavour')
+```
+
+```{r flavour eda, fig.width=15, fig.height=15}
+eda_plots(EDA_df, 'Flavour')
+```
+
+
+
+
+#### Q1B - Insect Texture
+```{r flavour summary eda, warning = FALSE}
+summary_eda(df_list, 'Texture')
+```
+
+```{r flavour eda, fig.width=15, fig.height=15}
+eda_plots(EDA_df, 'Texture')
+```
+
+
+
+
+#### Q1C - Insect Taste 
+
+```{r flavour summary eda, warning = FALSE}
+summary_eda(df_list, 'Taste')
+```
+
+```{r flavour eda, fig.width=15, fig.height=15}
+eda_plots(EDA_df, 'Taste')
+```
+
+
+
+### Q2 - Principal Component Analysis (15 marks)
+
+*Present the experiment's data using PCA - produce appropriate plots and text to describe the relationship between the different insects and Flavour, Texture, and Taste variables individually.*
+
+#### Q2A - Insect Flavour 
+```{r}
+flavour_pca <- prcomp(df_list$Flavour %>% select(-insect))
+
+#make a function to find the number of PCs that reach a threshold I input. Then I'll go and select those PCs and produce all pairwise PC plots... bugger. #or maybe just look at the main 3 in graph, then the loadings of the others in a table
+
+broom::tidy(flavour_pca, matrix = "pcs")
+
+fviz_screeplot(flavour_pca)
+
+fviz_pca_biplot(flavour_pca, 
+                repel = TRUE, 
+                axes = c(1, 2), 
+                col.ind = unlist(df_list$Liking[2]), #this is just using direct access to get the df I want. Lists are great. 
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 1 and 2") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+broom::tidy(flavour_pca, matrix = "rotation") %>% 
+  filter(PC == 1) %>%
+  arrange(desc(value))
+
+```
+
+
+
+
+```{r, fig.height=15, fig.width=15}
+Flavour_pca <- pca_analysis((df_list[['Flavour']][-1]), unlist(df_list$Liking[2]), 3, 3, 'Flavour')
+
+Flavour_pca$plot
+```
+
+
+```{r}
+test <- broom::tidy(flavour_pca, matrix = "rotation") %>%
+  filter(PC %in% 1:4) 
+```
+
+```{r}
+broom::tidy(flavour_pca, matrix = "rotation") %>%
+  filter(PC %in% 1:4) %>%
+  arrange(PC, desc(value)) %>%
+  group_by(PC) %>%
+  mutate(rank = row_number()) %>%
+  ungroup() %>%
+  mutate(Loading = paste0(column,', ', round(value,2))) %>%
+  select(PC, rank, Loading) %>% 
+  pivot_wider(
+    names_from = PC, 
+    values_from = Loading,
+    names_prefix = "PC"
+  ) %>% select(-rank)
+```
+
+```{r}
+test %>% 
+  ggplot(aes(x=column, y = value, ymin = 0, ymax = value, col = as.factor(PC), group = as.factor(PC))) +
+  geom_linerange(position = position_dodge(width = 0.5)) +
+  geom_point(position = position_dodge(width = 0.5)) +
+  theme_minimal() +
+  labs(color= 'PC',
+       title = 'PC loadings',
+       x ='') +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+
+```{r, warning=FALSE}
+broom::tidy(flavour_pca, matrix = "pcs") %>% filter(cumulative <= 0.85)
+```
+
+
+
+#### Q2B - Insect Texture
+
+```{r}
+#three PCs for texture
+texture_pca <- prcomp(df_list$Texture %>% select(-insect))
+
+#make a function to find the number of PCs that reach a threshold I input. Then I'll go and select those PCs and produce all pairwise PC plots... bugger. #or maybe just look at the main 3 in graph, then the loadings of the others in a table
+
+broom::tidy(texture_pca, matrix = "pcs")
+
+fviz_screeplot(texture_pca)
+
+fviz_pca_biplot(texture_pca, 
+                repel = TRUE, 
+                axes = c(1, 2), 
+                col.ind = unlist(df_list$Liking[2]), #this is just using direct access to get the df I want. Lists are great. 
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 1 and 2") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+```
+
+
+#### Q2C - Insect Taste 
+```{r}
+#3 PCs for taste
+taste_pca <- prcomp(df_list$Taste %>% select(-insect))
+
+#make a function to find the number of PCs that reach a threshold I input. Then I'll go and select those PCs and produce all pairwise PC plots... bugger. #or maybe just look at the main 3 in graph, then the loadings of the others in a table
+
+broom::tidy(taste_pca, matrix = "pcs")
+
+fviz_screeplot(taste_pca)
+
+fviz_pca_biplot(taste_pca, 
+                repel = TRUE, 
+                axes = c(1, 2), 
+                col.ind = unlist(df_list$Liking[2]), #this is just using direct access to get the df I want. Lists are great. 
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 1 and 2") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+```
+
+
+
+### Q3 - Insect Liking (10 marks)
+
+*Present the insect liking data on a suitable plot/table. Use this, and your work above, to explain which three insects were liked the most and why you think this is.*
+
+
+```{r parallel coord plot for taste, fig.width=20, fig.height=8}
+#35 radar chartrs are out. Do parallel coords chart instead
+question_3 <- function(data, n) {
+top_insects <- data$Liking %>% arrange(desc(liking)) %>% head(n) %>% select(insect)
+
+  
+P1 <- ggparcoord({data$Flavour %>% filter(insect %in% top_insects$insect)}, columns = 2:15, groupColumn = 1, showPoints = TRUE, alphaLines = 0.3, scale="globalminmax") + 
+  theme_minimal() +
+  labs(title = "Insects Flavour Scores") +
+  theme(legend.position = 'bottom')
+
+P2 <- ggparcoord({data$Taste %>% filter(insect %in% top_insects$insect)}, columns = 2:6, groupColumn = 1, showPoints = TRUE, alphaLines = 0.3, scale="globalminmax") +
+  theme_minimal() +
+  labs(title = "Insects Taste Scores") +
+  theme(legend.position = 'bottom')
+
+P3 <- ggparcoord({data$Texture %>% filter(insect %in% top_insects$insect)}, columns = 2:6, groupColumn = 1, showPoints = TRUE, alphaLines = 0.3, scale="globalminmax") +
+  theme_minimal() +
+  labs(title = "Insects Texture Scores") +
+  theme(legend.position = 'bottom')
+
+P1 / P2 / P3
+}
+
+question_3(df_list, 5)
+
+```
+
+```{r heat map of all data, fig.width=20, fig.height=10}
+total_insects <- EDA_df %>%mutate(insect = factor(insect, levels = unique(insect[order(liking, decreasing = FALSE)]))) %>%
+    group_by(insect) %>%
+    summarise(total = sum(Score), liking = mean(liking), .groups = 'drop') %>% arrange(desc(total)) %>%
+    ggplot(aes(x=liking, y = insect, color = liking)) + 
+    geom_point(size = 5) + 
+    geom_segment(aes(xend=0), linewidth = 2) +
+    scale_color_viridis_c(option = "inferno", direction = -1) + 
+    theme_minimal() +
+    labs(title = 'Insect Total Scores vs Insect Liking', color = 'Liking', y = "") +
+    theme(legend.position = 'bottom', axis.text.y = element_blank(), plot.margin = margin(0, 0, 0, 0))
+  
+heat_map <- EDA_df %>% mutate(insect = factor(insect, levels = unique(insect[order(liking, decreasing = FALSE)]))) %>%
+  group_by(Measure) %>%
+    ggplot(aes(x = Characteristic, y = insect, fill = Score)) +
+      geom_tile(color = "white", linewidth = 0.5) + 
+      scale_fill_viridis_c(option = "inferno", direction = -1) + 
+      theme_minimal() +
+      theme(
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), 
+        panel.grid = element_blank()
+       ) +
+      labs(fill = "Score", title = 'Insect characteristics', x = "", y = "") +
+      # Add Likeness Score as text on the right side
+      geom_text(aes(label = round(liking, 0)),
+                x = Inf, hjust = -0.5, size = 3, color = "black") +
+      coord_cartesian(clip = "off") +
+      theme(plot.margin = margin(5.5, 40, 5.5, 5.5), legend.position = 'bottom') 
+
+(heat_map | total_insects) + 
+    plot_annotation(title = 'Lemon ants are the most liked insect to eat',
+                    theme = theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold")))
+```
+
+Note, what is chemically sour vs what people call sour taste are different. People call tart or tangy flavours 'sour' as in a granny smith apple or a lemon curd or the loosely defined 'freshness' often described in vinegrettes. These are not 'sour' as such, but are mildly sour, braced by sweetness which humans like. 'Sour' which is the presence of chemical acids, is not an enjoyable experience for most people. Here, we cna see this misinterpretation in action. 
+
+
+### Q4 - Insect Pairing (10 marks)
+
+*Present the experiment's pairing data using PCA. Produce appropriate plots and text to describe the relationship between the different insects and what they are paired with.*
+```{r}
+pairing_pca <- prcomp(df_list$Pairing %>% select(-insect))
+
+#make a function to find the number of PCs that reach a threshold I input. Then I'll go and select those PCs and produce all pairwise PC plots... bugger. #or maybe just look at the main 3 in graph, then the loadings of the others in a table
+
+broom::tidy(pairing_pca, matrix = "pcs")
+
+fviz_screeplot(pairing_pca)
+
+fviz_pca_biplot(pairing_pca, 
+                repel = TRUE, 
+                axes = c(1, 2), 
+                col.ind = unlist(df_list$Liking[2]), #this is just using direct access to get the df I want. Lists are great. 
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 1 and 2") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+#select >= 0.85 for PCA cumulative values. Then stictch together the PCs 
+pc1 <- broom::tidy(pairing_pca, matrix = "rotation") %>% 
+  filter(PC == 1) %>%
+  arrange(desc(value))
+
+pc2 <- broom::tidy(pairing_pca, matrix = "rotation") %>%
+  filter(PC == 2) %>%
+  arrange(desc(value))
+
+pc3 <- broom::tidy(pairing_pca, matrix = "rotation") %>%
+  filter(PC == 3) %>%
+  arrange(desc(value))
+
+pc_loading <- bind_rows(pc1, pc2, pc3)
+
+```
+
+
+### Q5 - Statistical models (25 marks)
+
+#### Q5a - Flavour, Taste, or Texture?
+
+*Discuss which of the three characteristics (Flavour, Taste, or Texture), if any, you now consider the most important. In your answer, consider your findings from your previous analyses as well as any other contextual (or otherwise) information.* 
+Taste.
+Taste is the biggest element to the success of a dish. As an ex-chef I know this very well. Aromas can be masked or changed by cooking. Texture can be likewise controlled to some extent. If worst comes to worst, puree it and go from there. Taste, which is also changeable, is the most important thing. 
+This analysis is now somewhat moot. If you have this flavour profile data with texture and Flavour (which is mostly aroma), then you have a catalogue of ingredients a chef can use. Give a skilled chef these products and they can make something tasty. 
+I know, I have cooked with some of these insects before. 
+
+
+#### Q5b - Multiple Regression
+
+*Using only one of these (Flavour, Taste, or Texture), and liking information, perform multiple regression with liking as the response variable (you can assume this is a continuous variable here), describe any choices and checks you make along the way.*
+
+As a hint, you might start by combining liking with your characteristic of choice, e.g., for bug_flavour.
+
+```{r}
+liking <- bug_liking$liking
+flavour <- cbind(liking, bug_flavour)
+```
+
+#### Q5c - What does it all mean?
+
+*Describe this model using non-statistical jargon and explain how this model might inform your menu choices.*
+
+### Q6 - Your Menu (15 marks)
+
+*Design three (simple!) courses for your opening menu using bug-based food. Justify any decision made using your analysis and conclusions above. The three courses can be of any combination type (e.g., three starters, or one main and two desserts etc.), and should be constrained to those characteristics that you have information for (i.e., are in the survey).*
+
+Insects (what we are calling this group of invertebrates, not all of which are insects), are small and annoying to work with to create main dishes. And they are costly to acquire and process, so you aren't likely to break even. Additionally, they are often difficult to make into dish 'stars' because they have lesser flavours than commonly available ingredients. Unless they are dehydrated to increase their potency, which is overkill because dehydrated bugs are flaky and dry out the mouth. All this points to the use of insects as seasoning or ingredients in other dishes. An example form a place I used to work at was Danish Orange ants served live on creme friache. The taste of a zingy orange was the pheromones of the ants panicking as they were eaten. This was considered novel at the time, and because they aren't cute, no one cares about animal cruelty directed at insects. Luckily this isn't an ethics paper!
+
+Morio worm pate: having eaten witchetty grubs in Australia as a kid, and knowing that Morio worms are in fact a grub, I know from experience that the worst part about them is the exoskeleton. It can get stuck in your teeth. In this dish, the exoskeleton is blended into a fine pate. Many people enjoy a chicken or duck liver pate, but baulk at the unprocessed liver. The same concept is applied here. Make a boozy pate and serve with crusty bread. The benefit of this dish is that a pate's seasoning can be adjusted to achieve whatever flavour is desired, and so the buttery flavour of grubs can be complemented by spices or other accoutrements. 
+Smoking the grubs over straw will help counter their less desirable traits. 
+
+Termite crackers with taramasalata: Termites are not sour, mildly sweet, quite high bitter, salty and umami. That sounds like a toasted grain. Toasted rye or wheat berries, but with umami added. The idea in this dish is to puree the termites, mix them with a biding agent, spread them thin and dehydrate them into thin crackers that will be snapped into shards. These can be served with the taramasalata made from salted and cured cod roe. 
+
+Duck a la lemon ant - live. In order to thicken sauces, one can use a protein that coagulates as it heats to thicken the sauce. Blood sauce is thickened this way, and using egg yolk or cream is another example of this. This dish is a play on Duck a la orange. The sauce is instead thickened with a puree of lemon ants. They need to be pureed alive in order to extract their delicious panic. Then the liquidated protein can be used to thicken and season the duck pan juices. We can then get some dried ants, mix them with pepper and season with a lemon ant pepper for presentation. 
+
+```{r}
+df_list$Liking %>% arrange(desc(liking))
+```
+
+
+### Q7 - New Insects (10 marks)
+
+*Your supplier has just informed you of three newly FSANZ approved insects that you did not include on your original survey. Using the following characteristics, would you expect them to be liked or not and why?*
+
+**BugA: fresh, crunchy, sweet.**  
+**BugB: mushroom, soft, salty.**  
+**BugC: fish, pungent, umami.**  

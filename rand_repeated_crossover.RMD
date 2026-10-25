@@ -1,0 +1,426 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+subtitle: 161.228 Design and Analysis of Experiments 
+author: "Staff member responsible for this workshop: Michelle Marraffini m.marraffini@massey.ac.nz"
+date: "last updated 26 March 2026"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  fig.width = 8,    
+  fig.height = 6, 
+  fig.align = "center"
+)
+```
+
+## Before you undertake this exercise...
+
+Download this code template `r xfun::embed_file("rand_repeated_crossover.RMD")` to complete this practical exercise.
+
+## Random effects: nested design, crossed design, and repeated measures, o my.
+
+```{r}
+library(tidyverse)
+library(nlme)
+library(emmeans)
+library(lmerTest)
+```
+
+
+### Nested or Crossed?
+
+
+Nesting occurs when some levels of one factor in our experiment occur only within one of the levels of another factor. Nesting is contrasted with crossed designs, where all levels of the first treatment occur with all levels of the other. Nesting can occur in many models, including split-plot designs. Consider the following examples and decide if they are nested or crossed.
+
+1. A university researcher wants to know if a new teaching method produces better quiz results compared to an older method. She randomly allocates two of the years streams to trial the new teaching method and the other two to stick with the old method. She then takes the results of 10 student quizzes for each student in the stream. She analyses the results with the factors Method, Stream and Student, with the 10 quizzes as the residual variation. Should the factor Student be considered nested or crossed with Stream?
+
+::: {#answer}
+Nested. Students do not appear in both streams. Method is a fixed effect. Stream is a random effect. Student is nested within the stream. Quiz are repeated within student. 
+
+:::
+
+2. An agricultural scientist is exploring the effect of a dietary supplement on methane emissions in bovines. He notes that the breed of cow (Jersey or Friesian) also seems to affect the emissions, so he sets up an experiment where half of each breed is randomly allocated to receive the supplement, and half do not. Is the factor Breed crossed or nested with Supplement?
+
+::: {#answer}
+Crossed. Each breed recieves both levels of supplement. Both factors are fully represented across the breeds. 
+
+Cows are nested within each breed ( a cow cannot be of both breeds). Half of each breed are given a supplement. Supplement is the fixed effect. Breed is the random effect. 
+
+:::
+
+3. An agricultural scientist is looking at the effects of 3 irrigation levels and two fertilizers on their crops, but the irrigation machines are too large to randomise within a field. They end up with each irrigation level being applied to two fields, and fertilizer randomised within each plot in the field. Their final design includes the factors Fertilizer, Irrigation, Field and Plot. Which two factors are crossed, and which two are nested? 
+
+::: {#answer}
+Irrigation levels are a factor
+Fertilisers are a factor, randomised within each plot
+Plot is a random effect. 
+Field is the bin. 
+
+Irrigation is nested.
+Fertiliser is nested. Each level of fertiliser is applied to each level of irrigation
+Plot is nested.
+Field is nested.Plot is nested in field. Field is nested in irrigation. Since each irrigation level is applied to two entire fields, Field is nested within Irrigation.  Furthermore, Plot is a subdivision of Field, so Plot is nested within Field. 
+
+:::
+
+### Wine tasting dataset
+
+This dataset looks at a wine-tasting experiment carried out at Princeton. Nine wine-tasting judges were given ten white wines and ten red wines and asked to rate each wine  on a 20-point scale. 
+The study is available at: https://doi.org/10.1017/jwe.2012.23
+
+For reference, the wine colours are 1 for white, and 2 for red
+
+In this case we would like to investigate if the judges are consistent in their ratings, especially with respect to the colour of the wine (i.e. do some judges rate red wines more highly than whites). We are going to assume for this analysis that the wines on offer are a random selection from the wider population of wines of that colour. Therefore we have two sources of random variation: variation due to each type of wine, and then residual variation in each tasting of that wine.
+
+N.B. The purpose of the experiment is crucial. We are evaluating the judges using the wines, not evaluating the wines using the judges.
+
+Lets take a look at the data:
+
+
+```{r import wine data}
+Wines=read.csv("https://R-Resources.massey.ac.nz/reworked/AshenfelterStorchmann2012.csv", stringsAsFactors = TRUE) |> glimpse()
+```
+
+As we can see, R has imported our data as integers, while everything except Rating should be a factor, so lets fix that. 
+
+
+```{r fix wines}
+Wines <- Wines|> 
+  mutate(across(Judge:WineID, as.factor)) |> 
+  glimpse()
+```
+
+```{r}
+Wines
+```
+
+
+All factors are now correctly being treated as factors.
+
+### Visualise the data
+
+1. Visualize the data using a dot plot.
+
+::: {#answer}
+
+```{r}
+# your code goes here
+Wines %>% ggplot(aes(x=Judge, y = Rating, color = Colour)) + geom_point(position = position_jitter(width = 0.1))
+```
+
+```{r}
+Wines %>% 
+  ggplot(aes(x=Colour, y = Rating, color = Colour)) + 
+  geom_point(position = position_jitter(width = 0.1)) + 
+  geom_smooth(method = "lm", aes(group = 1), color = "black", se = FALSE) +
+  scale_color_manual(values = c("1" = "gold", "2" = "coral")) +
+  facet_wrap(~Judge)
+```
+
+
+:::
+
+2. **Looking at the plot, what are our initial impressions about the ratings given by the judges?** Comment on both average rating and the spread of ratings.
+
+::: {#answer}
+
+```{r}
+# your code goes here
+summary(Wines)
+
+Wines %>% group_by(Judge) %>% summarise(min = min(Rating), mean = mean(Rating), max = max(Rating))
+```
+Initial appearances seem to indicate that there is no bias in judge rating by wine color. The trend lines are tilited somwhat for each judge in either direction, but never overly so. Looking at the overall mean and spread from 7 to 19.5 with mean at 14.2 and judge specific spreads, it does look like judges produce different ratings in terms of their range of ratings. Some have a widers spread and some narrower. 
+
+:::
+
+
+3. Now try taking a look at the wines in a dot plot. Does this plot offer additional insights?
+
+
+::: {#answer}
+When looking at wine ratings it seems like specific wines, 17 and 18 for example, are more divisie of judge ratings. While others such as 7 and 8 are consistently scored. This shows judge preferece for specific wines. 
+
+```{r}
+# your code goes here
+Wines %>% 
+  ggplot(aes(x=Judge, y = Rating)) + 
+  geom_point(position = position_jitter(width = 0.1)) + 
+  geom_smooth(method = "lm", aes(group = 1), color = "red", se = FALSE) +
+  # scale_color_manual(values = c("1" = "gold", "2" = "coral")) +
+  facet_wrap(~WineID)
+```
+
+:::
+
+4. Fit a linear model using the `nlme` package. Ensure that you account for nesting variables. 
+
+Because our model has nesting, and consequently more than one source of random variation, we need to use a package to fit this mixed model. The simplest option is the lme() function from the nlme package.
+
+We can specify a random effect using the argument random. The line 1|WineID specifies that all the observations that share the same WineID share the same random intercept, and that the ratings are scattered around that intercept.
+::: {#answer}
+
+```{r}
+# your code goes here
+model1 <- lme(Rating ~ Judge * Colour, random = ~1 | WineID/Colour, data = Wines)
+
+anova(model1)
+```
+
+:::
+
+
+5. Based on the above results, **what can we conclude about how different judges rate the wines, and what impact the colour of the wine has on the different judges ratings?**
+
+We have very weak to no evidence of an interaction between judge and colour (F=1.53, p=0.151). If the judges have any preference for colour it is a very small effect. There is no significant effect of colour overall (F=0.001, p=0.979).
+
+We have highly significant evidence of a difference in the mean rating the different judges give, indicating that there is no consistency in the ratings given across judges, or that some judges tend to give higher scores than others (F=8.75, p<0.0001).
+
+On this basis, we might conclude that the judges are different. We can also say that while they are not perfectly consistent with one another in terms of the ranking of wines, they have no real colour bias.
+
+::: {#answer}
+Different judges rate wines differently, but the impact of wine colour is not significant. 
+
+```{r}
+# your code goes here
+model1.emm <- emmeans(model1, ~ Judge | Colour)
+model1.emm
+
+confint(pairs(model1.emm, adjust = "tukey"))
+
+plot(model1.emm)
+```
+
+:::
+
+
+6. Check model assumptions using residual plots. Present the plots and briefly comment on each assumption.
+The model meets the assumptions of linear models
+::: {#answer}
+
+```{r}
+# your code goes here
+qqnorm(model1, abline = c(0, 1))
+plot(model1, resid(., type = "p") ~ fitted(.), abline = 0)
+plot(model1, resid(., type = "p") ~ fitted(.) | Colour, abline = 0)
+plot(model1, Colour ~ resid(., type = "p"))
+plot(model1, sqrt(abs(resid(., type = "p"))) ~ fitted(.), abline = 0)
+
+
+
+```
+
+```{r}
+res_lme=residuals(model1)
+plot(res_lme,col=Wines$Judge)
+```
+unequal variance associated with the different judges. Judges 3 & 6 have less scatter than judges 4,5 & 9, but it is unlikely to be a major problem.
+
+:::
+
+
+7. Fit the same model using the `lme4` package. Are the conclusions any different?
+
+::: {#answer}
+Yes the conclusion is the same. Judges matter, color doesn't
+
+```{r}
+# your code goes here
+model2 <-  lmer(Rating ~ Judge*Colour + (1 | Colour/WineID), data = Wines)
+
+anova(model2)
+```
+The models have slightly different p values, but the overall impression is the same. Judges are different, but they cannot be separated into groups representing red wine likers or white wine likers.
+
+:::
+
+
+## Cross over experiment
+
+## Sleep study
+
+The following data are from a study of the effect of sleep deprivation on reaction times from the *Journal of Sleep Research* 12, 1–12.  
+
+The response variable is the average reaction time per day (in milliseconds)
+
+The fixed factor is the number of days of sleep deprivation. Days 0-2 were excluded as 'training' days. 
+
+The random factor is the individual human test subject.
+
+```{r}
+data("sleepstudy")
+glimpse(sleepstudy)
+```
+
+1. First a plot of the data and make a table to help visualize the experimental design.
+
+::: {#answer}
+
+```{r}
+# your code goes here
+plot(Reaction  ~ Days,col=Subject , pch = 1, ylab="Reaction time (ms)", xlab = "Days",  data = sleepstudy,fig.align='center')
+
+```
+
+:::
+
+2. Generate a model with random intercepts, one with random slopes, and one with both random intercepts and random slopes.
+
+::: {#answer}
+Random intercepts:
+
+```{r}
+# your code goes here
+mdl <- lmer(Reaction  ~ Days + (1|Subject), data=sleepstudy, subset=Days>=2)
+summary(mdl)
+```
+Random Slopes:
+```{r}
+mdl <- lmer(Reaction  ~ Days + (0+Days|Subject), data=sleepstudy, subset=Days>=2)
+summary(mdl)
+```
+
+Both random intercepts and slopes:
+
+```{r}
+mdl <- lmer(Reaction  ~ Days + (Days|Subject), data=sleepstudy, subset=Days>=2)
+summary(mdl)
+```
+
+:::
+
+3. Which model makes the most sense for the study design? why?
+
+::: {#answer}
+
+
+:::
+
+4. Check the assumptions of the model you picked in question 4.
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+
+:::
+
+5. Plot the results of your model.
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+
+:::
+
+6. Provide a brief interpretation of your results.
+We have highly significant evidence that the number of days of sleep deprivation affects the subjects reaction time ( t=6.2,p=0.0000097
+). For every extra day of sleep deprivation, the mean response time was 11.44ms later. The subjects individual slopes showed a small degree of variation, only one subject showed improving response time despite sleep deprivation.
+
+The greatest source of random error in the model was subject intercepts. There was a large degree of variation in subjects initial response time, while the residual variation associated with individual tests was smaller.
+
+The negative correlation between days and intercept could indicate that those who did best initially were most affected by sleep deprivation.
+
+There were some slight issues with non-normality of the errors, however the model is likely to be robust to these. There were a few clear outliers, and there seems to be greater dispersion for subject 308.
+
+::: {#answer}
+
+
+
+:::
+
+
+## Repeated measures
+
+```{r}
+library(lmerTest)
+library(visreg)
+```
+
+
+## The Heart Rate experiment
+
+Download `r xfun::embed_file("HeartRate.csv")` to complete this practical exercise.
+
+Twenty‐four  female  human  subjects were selected for an experiment aimed at evaluating the effect of two prescription drugs on heart rate. After a drug is administered, heart rate is measured four times  at  five minute  intervals.  The treatment assignment was done by randomly dividing the group of subjects into three groups of eight people: one to receive Drug A, one to receive Drug B, and the third group to receive a placebo (labelled Drug C, for control).
+
+Source: Milliken,  G.,  and  Johnson,  D.  (2009)  **Analysis  of  Messy  Data  Volume  I:  Designed Experiments**, Second edition, Chapman and Hall/CRC Press, Boca Raton, Florida.
+
+Like many datasets of this kind, the data is stored in a wide format. We need to make several adjustments to get it into the shape we need:
+
+
+```{r}
+HeartRate = read.csv("HeartRate.csv") |>
+mutate(across(c(Subject:Drug), as.factor)) |>
+pivot_longer(cols=3:6, names_to = "Order", values_to="Y") |>
+mutate(Order=as.factor(Order), Week = as.numeric(Order)) |>
+glimpse()
+```
+
+
+1. Produce an appropriate visualization of the data. Briefly comment on any patterns.
+
+::: {#answer}
+
+```{r}
+# your code goes here
+HeartRate |> ggplot(aes(x = Subject, y = Y, fill = Drug)) + geom_dotplot(binaxis = "y", stackdir = "center") + facet_wrap(~Order)
+
+```
+
+:::
+
+2. Fit the mixed effects model using `lmer` package that assumes no correlation over the successive time points. Make sure the choice of time variable is the numeric variable, not the factor. Is there anythign you are concerned about? What are the conclusions from this model?
+
+::: {#answer}
+
+```{r}
+# your code goes here
+HeartRate.lmer1 = lmer(Y ~ Drug*Week + (Drug|Subject), data = HeartRate) 
+
+anova(HeartRate.lmer1)
+```
+
+:::
+
+3: Compare that model to the one that uses the time variable as a factor. Which is to be preferred?
+
+::: {#answer}
+
+```{r}
+# your code goes here
+HeartRate.lmer2 = lmer(Y ~ Drug*Order + (Drug|Subject), data = HeartRate) 
+anova(HeartRate.lmer2)
+```
+N.B. I have used the AIC as my decision criterion here. It says the model using time as a factor is better. We can also see that the factor version of time is significant and the linear (numeric) version is not, which suggests some sort of nonlinear relationship over time.
+:::
+
+
+4: Which correlation structures make sense for this scenario? Do **NOT** try to fit the model.
+
+::: {#answer}
+This scenario is similar to the example on cows used in the lecture on Repeated Measures experiments. Compound symmetry might make some sense, but the autoregressive option is perhaps more plausible. This is what we might start with, but the models do not work well. This relates to the warnings given for the mixed effects models attempted thus far which have “failed to converge” (always a warning worth noting). The second model shows significant results; further improvements will not offer much practical benefit.
+
+:::
+
+5: How would you visualize the data and the model results?
+
+::: {#answer}
+
+```{r}
+# your code goes here
+visreg::visreg(HeartRate.lmer2, "Drug", by="Order", ylab="Y", overlay=TRUE)
+
+```
+
+:::
+

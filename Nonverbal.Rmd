@@ -1,0 +1,214 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+subtitle: 161.222 Design and Analysis of Experiments and 228.371 Statistical Modelling...
+author: "Staff member responsible for this workshop: Jonathan Godfrey a.j.godfrey@massey.ac.nz"
+date: "last updated 17 February 2025"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and images.
+- Before you proceed, test the template works for you, and fix any errors.
+
+
+# Practical Exercise: Analysis of Covariance 
+
+
+## Aims of this practical exercise
+
+
+In this exercise you will:
+
+- Fit a model with a treatment factor and a covariate
+- Interpret significant coefficients
+- Estimate treatment means
+- Check model assumptions
+
+
+## Before you undertake this exercise...
+
+Let's load the packages we will need.
+
+
+```{r}
+library(tidyverse)
+library(ggfortify)
+library(emmeans)
+```
+
+## Analysis of covariance
+
+Often in experimental design, we will have variables that could influence our response, but cannot be controlled or measured before the experiment begins. Unlike a blocking variable, we don't know what they will be until we measure them in the experiment. In these cases we would like to include these covariates in our data collection, then estimate them in our model to "remove" their effect on our response.
+
+### Nonverbal cues dataset
+
+This dataset looks at an experiment to see if people suffering Bipolar disorder or Unipolar Depressive disorder have greater difficulty interpreting non-verbal cues than unaffected control group subjects. The study is fully described in the article at:  https://doi.org/10.1371/journal.pone.0222112
+
+Test subjects are shown 64 short clips of faces showing an emotion, and are given a multiple-choice questionnaire. The response variable is the number of non-verbal cues the subjects correctly identified. The samples sizes are 119 Bipolar, 39 Unipolar Depressive, and 119 Control.
+
+Age is also thought to impact a participant's score, and is not something the experimenter can control or measure prior to the study, so is included as a covariate.
+
+Lets take a look at the data:
+
+
+``` {r}
+Nonverbal<-read.csv("https://R-Resources.massey.ac.nz/reworked/EspinosEtAl2019.csv", stringsAsFactors = TRUE)
+Nonverbal<-Nonverbal |> select(Group,Age,Right_answers) |>
+glimpse()
+```
+
+Looks good. Because the groups are strings, and we have `stringsAsFactors = TRUE` R has correctly imported Group as a factor.
+
+#### Visualise the data
+
+Now let's take a look at our data. Since our linear model will be fitting a straight line to the data, let's compare a linear model to a loess smooth to see if it looks appropriate. 
+
+
+``` {r}
+ggplot(data=Nonverbal,aes(x=Age,y=Right_answers ,group=Group,colour=Group)) +
+  geom_point()+
+  geom_smooth(method=loess)
+
+ggplot(data=Nonverbal,aes(x=Age,y=Right_answers ,group=Group,colour=Group)) +
+  geom_point()+
+  geom_smooth(method=lm)
+```
+
+We can see there are some clear differences in the number of emotional cues correctly interpreted between the groups, and also a negative relationship with age.
+
+Importantly, we can see that not all treatment groups cover the same age range, although there is considerable overlap. This makes it especially important that we have the covariate in our model, as we shall see later.
+
+Looking at the loess smoother, there is also the possibility of a non-linear relationship with age in the Bipolar and Depressive groups, but given the number of observations, this could just be some random noise.
+
+#### Fit a linear model
+
+Let's now have a look at what our statistical analysis says. 
+
+If we want to fit a model in which the slopes are assumed to be identical across the groups, we will use a plus `+`. If we want to allow for differing slopes, we would use an asterisk `*`. We can get the estimated coefficients for the groups and the slope for our covariate using `coef(my.lm)`
+
+For example:
+
+```{r}
+my.lm <- lm(Response~Covariate+Treatment,data=Nonverbal)
+anova(my.lm)
+coef(my.lm)
+```
+
+**Try fitting a linear model to the non-verbal cues data without an interaction**
+
+```{r}
+model1 <- lm(Right_answers ~ Age + Group ,data = Nonverbal)
+anova(model1)
+coef(model1)
+```
+
+
+
+Once you have run your code, note that we have estimates for the control group and the UD group, indicating that R has picked the Bipolar group to be our baseline. However, in this case it makes sense to use the control group as the baseline, so let's try reordering our factors and try again.
+
+
+``` {r}
+Nonverbal<- Nonverbal |>
+  mutate(Group=factor(Group,levels=c("Control","Bipolar","UD")))
+```
+
+
+```{r}
+model2 <- lm(Right_answers ~ Age + Group, data = Nonverbal)
+anova(model2)
+coef(model2)
+```
+
+When you have re-run your model, **what can we conclude about the groups?**
+There is significant evidence that the mean number of answers differs between groups. F score of 46, p of 2.2e-16.
+Bipolar groups on average has 4.8 right answers less than the control group. UD group has 5.6 right answers less than the control group. 
+
+
+**What can we conclude about the effect of Age?**
+Age has a significant effect on the result of right answers by group. 
+As age increases the right answers decrease at 0.11 right anserws per extra year of age. 
+
+
+Now let's check to see if the slope is identical across the different groups.
+
+**Try fitting a linear model allowing for an interaction between Age and Group**
+
+```{r}
+model3 <- lm(Right_answers ~ Age * Group, data = Nonverbal)
+anova(model3)
+coef(model3)
+```
+
+
+```{r}
+anova(model2, model3)
+```
+
+**What can we conclude about the interaction term?**
+there is no evidence to support that the relationships between age and mean score vary between groups, F value 0.4294, p 0.65. 
+Adding the interaction term did not significantly improve the model. 
+
+#### Checking residuals
+
+We should check that our residuals look approximately normally distributed with equal variance. In this case it might be worth colouring our points based on which group they are in.
+
+
+``` {r, warning=FALSE}
+autoplot(model2,colour="Group")
+```
+
+
+#### Estimating treatmeant means
+
+Normally, we can state the mean response for each treatment group, and give confidence intervals for those means. However in this case we have a significant covariate. This means that the mean treatment effect *differs depending on what age we are talking about*. 
+
+One practical solution is to give the treatment means for the average age. We can do this in `emmeans`.
+
+
+``` {r}
+emmeans(model2, pairwise ~ Group)
+```
+
+This creates the full set of pairwise tests. 
+
+
+We also have our confidence intervals. **Interpret the 95% confidence interval for the Unipolar Depressive group**
+The control group is significantly higher than the other two groups. While there is no signifncat difference between bipolar and unipolar groups.
+
+with 95% confidence interval the corect number of questions answered by the unipolar group is between 42.8 and 45.8. 
+
+#### Failure to include a covariate
+
+Look again at our original plot of the data. We can see that both Group and Age affect our response variable, but also Age is not independent of Group, in that the younger participants are all in the Control or Bipolar groups, and all the oldest participants are in the Unipolar Depressive group.
+
+Given that our model is trying to partition the variation we see between the effects of Age and Group, **what do you expect to happen to the estimated coefficient for the Unipolar Depressive group if we do not include age as a covariate?**
+
+
+Lets try fitting our model without Age in order to check
+
+
+``` {r}
+Nonverbal.lm<-lm(Right_answers~Group,data=Nonverbal)
+anova(Nonverbal.lm)
+emmeans(Nonverbal.lm, pairwise ~ Group)
+```
+ the coefficients have become more negative for the oldest age group, Unipolar Depressive. The former estimated mean of 44.3 has become 42.7. If we did not include the covariate, we would overestimate the negative impact for this group. This demonstrates how including covariates is important to ‘remove’ their effect before testing our treatments.
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/161222/practicals/Nonverbal-sols.html)

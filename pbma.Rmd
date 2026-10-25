@@ -1,0 +1,139 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+author: "Staff member responsible for this workshop: Mel Whitehead m.whitehead@massey.ac.nz"
+date: "last updated 1 April 2026"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and images.
+- Before you proceed, test the template works for you, and fix any errors.
+
+# Practical Exercise: Principal Component Analysis (PCA) with real-data
+
+This exercise is useful for:
+
+- 161.228,
+- anyone who wants to practice PCA with real-data.
+
+## Aims of this practical exercise
+
+In this exercise you will:
+
+- Run PCA on real-data, 
+- Visualise the results,
+- Interpret these results in context.
+
+## Before you undertake this exercise...
+
+Let’s load the packages we will need.
+
+```{r}
+library(readxl) # might need to install
+library(factoextra) # might need to install
+```
+
+## Plant-based Meat Alternatives
+
+This exercise follows the same process, and uses the same data as for PCA Example 4, blurb repeated here, for reference to the source manuscript see the lecture notes.
+
+There are 21 different meat alternatives that they asked 140 people to assess for appearance, emotion, flavour, and texture attributes. The method of collection was choose all that apply for each set of attributes. 
+
+In the lecture, we looked at Appearance attributes. In this practical example, we will look at Emotion attributes.
+
+```{r}
+pbma <- read_xlsx("pbma.xlsx", sheet = "Emotion attributes") 
+rownames(pbma) <- pbma$option
+pbma <- pbma[,2:25] # there are 25 variables, we want 2:25, because 1 is the pbma name (option)
+```
+
+
+## Required:
+
+Use the `factoextra` package to perform a Principal Component Analysis for the Emotion attributes.
+
+Make sure you:  
+
+- consider how many PCs you want to keep and why,
+- Use suitable plots to represent your PCA results,
+- Use suitable numeric outputs to represent your PCA results,
+- Add in "Liking" (as per the lecture demonstration) to your plots,
+- Describe your findings in context,
+- Provide a recommendation based on these findings.
+
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/practicals/pbma-sols.html)
+
+```{r}
+pbma_pca <- prcomp(pbma)
+```
+
+```{r}
+summary(pbma_pca)
+
+broom::tidy(prcomp(pbma), matrix = "pcs")
+```
+
+```{r}
+screeplot(pbma_pca)
+
+fviz_screeplot(pbma_pca)
+```
+
+need only PC1, will use PC 1 and 2
+
+```{r}
+fviz_pca_biplot(pbma_pca, repel = TRUE) + # remember the default is PC1 and PC2, repel is to stop labels overlapping
+  coord_equal() # This is to make the distanecs comparable (equal) across both axes.
+```
+
+```{r}
+pbma_pca$rotation
+```
+
+```{r}
+sort(pbma_pca$rotation[,1])
+```
+
+```{r}
+deliciousness <- read_xlsx("pbma.xlsx", sheet = "Liking")[,2] # same dataset, just a different sheet, 
+# and I've just taken the Liking values using [,2]
+liking <- unlist(deliciousness)
+fviz_pca_ind(pbma_pca, repel = TRUE, col.ind = liking) + # colour the labels by the liking value
+  coord_equal()
+```
+
+Describe your findings in context
+The results are completely un-intuitive.
+
+The pbma’s that had the highest liking (lighter blue in the plot above) mainly appear on the negative side for PC1.
+
+The negative pole of PC1 is associated with Emotion attributes like disappointed and dissatisfied.
+
+This is not what we’d expect. You would think that if you liked a food, you would associated it with more positive emotions.
+
+Provide a recommendation based on these findings
+Suggest the data is re-checked for accuracy, maybe some exploratory data analysis would help identify the problem.
+
+Or, investigate potential latent variables - were these delicious foods given to consumers while a fire alarm was going off? Or in a really cold room?
+
+Or, maybe people find food more delicious when they’re upset??
+
+[Or maybe, because they were made up liking data, they shouldn’t follow natural intuition]

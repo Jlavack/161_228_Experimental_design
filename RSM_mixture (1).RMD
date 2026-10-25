@@ -1,0 +1,316 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+subtitle: 161.228 Design and Analysis of Experiments 
+author: "Staff member responsible for this workshop: Michelle Marraffini m.marraffini@massey.ac.nz"
+date: "last updated 26 March 2026"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+## RSM and Mixture Experiments
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+## Before you undertake this exercise...
+
+Be sure to download this code template `r xfun::embed_file("RSM_mixture.RMD")` to complete this practical exercise.
+
+Get the necessary add-on packages:
+
+```{r getLibs}
+library(rsm)
+library(modelsummary)
+library(broom)
+library(ggeffects)
+library(tidyverse)
+```
+
+
+## Extraction of Antibodies
+
+`r xfun::embed_file("Antibodies.csv")` to complete this practical exercise.
+
+Data Source: Paula A.J. Rosa, Ana M. Azevedo, M. Raquel Aires-Barros,  (2007) "Application of central composite design to the optimisation of aqueous two-phase extraction of human antibodies", *Journal of Chromatography A*, **1141**, 50-60. https://www.sciencedirect.com/science/article/pii/S0021967306022163
+
+
+```{r getAntibodies, echo=TRUE}
+Antibodies = read.csv("Antibodies.csv") |>
+glimpse()
+```
+
+Controlled variables:
+
+`X1` = Phosphate concentration, `X2` = PEG concentration, `X3` = pH, and `X4` = NaCl. concentration
+
+There are also four response variables.
+
+1. Generate RSM models using `Ytop` as the response and preform lack-of-fit tests.
+
+::: {#answer}
+
+```{r}
+# your code goes here
+Ytop.rsm1 <- rsm(Ytop ~ FO(X1, X2, X3, X4), Antibodies)
+Ytop.rsm2 <- rsm(Ytop ~ FO(X1, X2, X3, X4) + TWI(X1, X2, X3, X4), Antibodies)
+Ytop.rsm3 <- rsm(Ytop ~ SO(X1, X2, X3, X4), Antibodies)
+```
+
+```{r}
+anova(Ytop.rsm1, Ytop.rsm2)
+```
+
+```{r}
+anova(Ytop.rsm2, Ytop.rsm3)
+```
+
+
+:::
+
+2. Which model is most appropriate? Obtain the model summaries for that model.
+
+::: {#answer}
+
+
+```{r}
+# your code goes here
+summary(Ytop.rsm3)
+```
+```{r}
+Ytop.rsm3 |> summary() |> tidy() |>
+  mutate(across(where(is.numeric), ~round(., 2)))-> out1
+out1 |> t() |> knitr::kable() 
+```
+
+```{r}
+Ytop.rsm3 |> 
+modelsummary(output = "markdown")
+```
+
+:::
+
+3. Generate contour plots for your model and the perspective plots.
+
+::: {#answer}
+
+
+```{r, warning=FALSE}
+# your code goes here
+par(mfrow=c(2,3))
+contour(Ytop.rsm1, ~X1+X2+X3+X4, image=TRUE, contours='colors')
+contour(Ytop.rsm2, ~X1+X2+X3+X4, image=TRUE, contours='colors')
+contour(Ytop.rsm3, ~X1+X2+X3+X4, image=TRUE, contours='colors')
+```
+
+```{r, warning=FALSE}
+par(mfrow=c(2,3))
+persp(Ytop.rsm1, ~X1+X2+X3+X4, image=TRUE, contours="colors")
+persp(Ytop.rsm2, ~X1+X2+X3+X4, image=TRUE, contours="colors")
+persp(Ytop.rsm3, ~X1+X2+X3+X4, image=TRUE, contours="colors")
+```
+
+
+:::
+
+4. Find the stationary points for this model.
+
+::: {#answer}
+
+
+```{r}
+# your code goes here
+xs(Ytop.rsm3)
+```
+
+:::
+
+5. Based on the plots and stationary points briefly describe the results of your model. What does this mean for the experiment? 
+
+::: {#answer}
+
+The model Ytop.rsm3 shows a saddle structure which indicates that the optimum lies outside the current design space. The experimenter should try further experiments and vary X4 which showed the most significance as a predictor variable. 
+
+
+
+:::
+
+For Reference:
+The model fitted by the authors for the `Ytop` response is shown below:.
+
+```{r Ytop.rsm4, echo=TRUE}
+Ytop.rsm4 <- lm(Ytop ~ X1+X2+X3+X4+X1:X4+X2:X3+X2:X4+X3:X4, Antibodies)
+Ytop.rsm4 |> coef()
+anova(Ytop.rsm4)
+```
+
+and we can get an attractive graphic summary using:
+
+```{r plotYtop.rsm4}
+library(ggeffects)
+plot(ggeffect(Ytop.rsm4, terms = ~X4+X1))
+```
+
+
+
+```{r contourYtop.rsm4, echo=TRUE}
+par(mfrow=c(1,2))
+contour(Ytop.rsm4, X2~X4, image=TRUE)
+persp(Ytop.rsm4, X2~X4, image=TRUE, contours="colors")
+```
+
+## Mixture experiment:
+You will need to `r xfun::embed_file("Margarita.csv")` to complete this practical exercise.
+
+In mixture experiments we are looking at components that sum to one.
+
+```{r mix lib}
+library(mixexp)
+```
+
+The four ingredients used in a margarita are 1) margarita mix (sour mix), 2) Tequila, 3) triple sec, and 4) lime juice. The mixture is a constrained mixture experiment as the minimum and maximum percentages of the drink are established for each of the four ingredients.
+
+```{r}
+Margarita = read.csv("Margarita.csv") |>
+glimpse()
+```
+
+
+Note that the data has the four ingredients in two forms. First, the percentage of the volume is given, and second, the relative contribution (Pseudo components) to the portion of the mix that is actually being altered. The Pseudo components are used in modelling the problem.
+
+
+There are two response variables on offer in this data. We will use `Ranking` which is the method that forces each respondent to rank the recipes from best to worst (1-15), and then averages over the participants. We are told the fifteen participants were given the samples in random order.
+
+1. Investigate the design. What types of points for mixtures should you expect, and are they all present?
+
+::: {#answer}
+
+```{r}
+# your code goes here
+# view(Margarita) # comment this out to render or switch to print() 
+# the data has 4 variables but I am forcing it to 3 just for illustration of code purposes.
+# mixexp package struggles with names and extra data, we can use tidyverse to help that
+Margarita2 = Margarita |> select(MmixPC:TripleSecPC,Ranking) |> rename(x1=MmixPC, x2=TequilaPC, x3=TripleSecPC,  y=Ranking)
+DesignPoints(Margarita2) # this doesn't really help us because there are 4 predictors 
+```
+The table lists the 15 design points; you should look at the columns for the pseudo components, not the percentages.
+
+There are no points that use the whole of the discretionary amounts (combinations of 1:0:0:0), no half blends (combinations of 0.5:0.5:0:0), no exact third blends, and no four-way (equal) blend point. The design is therefore not a simplex as we saw in lectures, but there are patterns among the points. Look at runs 2, 4, 6, 7, etc. They have a pattern that rotates among the four ingredients.
+:::
+
+
+2. Find a sensible  mixture model for this data. The first model you should try is:
+
+```{r}
+mixvars<-c("MmixPC", "TequilaPC", "TripleSecPC", "LimeJuicePC")
+Margarita.mix1 = MixModel(Margarita, "Ranking", mixvars, model=1)
+Margarita.mix1 |> anova()
+```
+
+Now design your own model. Compare these models
+
+::: {#answer}
+
+
+```{r}
+# your code goes here
+Margarita.mix2 <- MixModel(Margarita, "Ranking", mixvars, model=2)
+anova(Margarita.mix2)
+```
+The second model has a near perfect fit
+:::
+
+
+
+3. Make an effects plot for your model above. The `mixexp` package is not very flexible with variable names. In order to make the effects plot, you will need to create a dataset which uses bland variable names. 
+
+::: {#answer}
+
+```{r}
+# your code goes here
+# Margarita2 = Margarita |> select(MmixPC:Ranking) |> rename(x1=MmixPC, x2=TequilaPC, x3=TripleSecPC,  X4 = LimeJuicePC, y=Ranking)
+DesignPoints( Margarita |> select(MmixPC:Ranking) |> rename(x1=MmixPC, x2=TequilaPC, x3=TripleSecPC,  x4 = LimeJuicePC, y=Ranking))
+```
+
+```{r}
+Margarita2 = Margarita |> select(MmixPC:Ranking) |> rename(x1=MmixPC, x2=TequilaPC, x3=TripleSecPC,  x4 = LimeJuicePC, y=Ranking)
+EffPlot(des=Margarita2, nfac=4, mod=2, dir=1)
+```
+This mixture experiment has 4 variables so a triangle contour plot would not be as easy to see all the variables.
+
+```{r}
+# note this is just for 3 of the 4 factors it is not the complete results
+# this code illustrates the problem described above
+# for this to be an appropriate plot you need to produce multiple of these
+MixturePlot( x=Margarita2$x2, y= Margarita2$x3, z=Margarita2$x4, Margarita2$y, mod=2, cols=T)
+```
+
+:::
+
+4. The authors found the solution to this problem using the Design-Expert software to be x1 (margarita mix) = 55.00%, x2 (tequila) = 25.67%, x3 (Triple Sec) = 9.33%, and x4 (lime juice) = 10.00%. At this point, the predicted value of goodness is 5.9 and the predicted ranking is 4.7. How do your results compare? 
+
+::: {#answer}
+
+This answer depends on your chosen model.
+
+Coefficients of individual components do not measure the overall effect of component xi, but only estimate the value of the response at the vertex of the simplex. If these coefficients are not significant, it does not mean that the effect of the individual component is not important, so hypothesis tests on them are usually ignored.
+
+Coefficients of double interactions. If the sign of this coefficient is positive, there is synergy between the components; if it is negative, there is antagonism between them.
+
+Triple interaction coefficients. Quantifies the effect of the ternary mixture within the simplex.
+
+```{r}
+# Example logic for a grid search
+grid <- seq(0, 1, by = 0.05)
+space <- expand.grid(MmixPC = grid, TequilaPC = grid, TripleSecPC = grid, LimeJuicePC = grid)
+# Keep only rows that sum to 1
+space <- space[rowSums(space) == 1, ]
+
+# Predict and find the max
+space$Prediction <- predict(Margarita.mix2, newdata = space)
+optimal_mixture <- space[which.max(space$Prediction), ]
+
+optimal_mixture
+```
+
+The model is predicting that the “best” mixture is 100% of one ingredient, TripleSecPC. This often suggests that the true maximum lies outside the range you tested, and you might need to run a follow-up experiment with different ingredient bounds.
+:::
+
+```{r}
+library(ggtern)
+
+# Define grid with finer control
+grid <- seq(0, 1, by = 0.01)
+
+# Create mixture space efficiently
+mixture_data <- subset(
+  expand.grid(stabilizer = grid, fat = grid, cream = grid),
+  abs(stabilizer + fat + cream - 1) < 1e-6  # Use tolerance for floating point
+)
+
+# Predict response
+mixture_data$Prediction <- predict(Lentil.mix2, newdata = mixture_data)
+
+# Find optimal mixture
+optimal_mixture <- mixture_data[which.max(mixture_data$Prediction), ]
+
+# View result
+print(optimal_mixture)
+
+ggtern(data = mixture_data, aes(x = stabilizer, y = fat, z = cream)) +
+  geom_point(aes(color = Prediction), size = 1) +
+  geom_point(data = optimal_mixture, size = 4, color = "red", shape = 17) +
+
+  scale_color_viridis_c() +
+  theme_minimal() +
+  labs(title = "Mixture Experiment: Prediction Surface",
+       color = "Predicted Response") +
+  theme(legend.position = "right")
+```
+
+

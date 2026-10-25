@@ -1,0 +1,118 @@
+---
+title: "Portfolio_06"
+author: "John Lavack 20001249"
+date: "2026-05-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  fig.width = 8,    
+  fig.height = 6, 
+  fig.align = "center"
+)
+
+library(tidyverse)
+library(nlme)
+library(emmeans)
+library(lmerTest)
+library(multcomp)
+
+data <- read.csv("https://R-Resources.massey.ac.nz/161228/PortfolioTasks/MarineFouling2649.csv") %>% 
+  mutate(trial = as.factor(trial),
+         richness = as.factor(richness),
+         open_space = as.factor(open_space))
+
+```
+
+```{r}
+glimpse(data)
+
+data %>% group_by(trial, rep) %>% summarise(n())
+```
+
+
+# Fit two models 
+
+Note: each trial can accommodate 30 plates. 10 replicates are needed per treatment. Therefore repetition is nested within trial. 
+The treatment factors are split across trials. Therefore, trial is a blocking factor. 
+Trial is also a random effect, because 30 plates are split across multiple trials. 
+
+## Without trial vairable
+```{r model 1 without trial}
+model1 <- lmer(settlers_log ~ richness * open_space + (1 | rep), data = data)
+
+anova(model1)
+
+#residual plots
+plot(model1, resid(., scaled = TRUE) ~ fitted(.), abline = 0, main = 'Residual vs fitted')
+
+qqnorm(residuals(model1))
+qqline(residuals(model1), col = "red")
+
+plot(model1, sqrt(abs(resid(., scaled = TRUE))) ~ fitted(.), 
+     type = c("p", "smooth"), main = "Scale-Location")
+
+#emmeans plot
+plot(glht(model1))
+```
+
+
+
+## With trial variable
+
+```{r}
+model2 <- lmer(settlers_log ~ richness * open_space + (1 | trial/rep), data = data)
+
+anova(model2)
+
+#Residual ploits
+plot(model2, resid(., scaled = TRUE) ~ fitted(.), abline = 0, main = 'Residual vs fitted')
+
+qqnorm(residuals(model2))
+qqline(residuals(model2), col = "red")
+
+plot(model2, sqrt(abs(resid(., scaled = TRUE))) ~ fitted(.), 
+     type = c("p", "smooth"), main = "Scale-Location")
+
+#emmeans plot
+plot(glht(model2))
+```
+
+# Compare the two models
+
+Model 1, without the trial variable, only includes replicates as the random effect. Assuming all variation is caused by the replication While we know that each trial had a random allocation of replications, therefore this is an unbalanced design. 
+
+Model 2 accounts for the nesting of replicates within trial. Acknowledging that plates measured in the same trial may share unmeasured variation. Water temperature and larval supply for example. 
+
+The impact to the analysis is primarily in the denominator degrees of freedom and f value. The overall interpretation of the results are the same; that both richness and open space are significant while the interaction is also significant, but less so. 
+In the first model there are 72 denominator degrees of freedom and in model 2 there are 79 (approximately). The change reflects more accurate estimation due to proper nesting of replication within trial. The analysis of F values for main effects indicate that model 2 better isolates treatment effects by including trial-level variation. Seen as an increase in F values in model 2. While the interaction F value decreased which suggests that the higher F value in model 1 was due to confounded trial effects.
+
+Model 2 therefore reduces unexplained noise, improves the precision of fixed effect estimates and results in more reliable P values and hence inference. Even if the ultimate conclusions are the same. 
+We can see this in the residual and emmeans plots of the models. The scale-location plot's trend line of model 2 is more straight, lacking the elbow of model 1's. And the residual vs fitted plot of model 2 lacks the gap in the centre, while having more consistently randomly spread points compared to morel 1. 
+
+
+Model 2 has slight differences to model 1 in mean and spread of the intercept and each factor. Looking at each plot the same conclusion would be reached, but model 2 is more precise. 
+
+
+
+# Plot
+
+This plot shows the effect of one variable on the response as it changes across levels of the other. In this case how the log of the settlers changes by the interaction of open space and richness. Lower curves shows better resistance to invasion from settler species. When richness is at 1, the plate has consistently higher settler species irrespective of open space. With more local species the settlers reduce. The level of overlap between richness decreases as open space increases. More open space therefore acts to enable more settlers. A smaller local species count in more open space gets more settlers than a higher number of local species in the same open space. 
+
+In summary, if there are few local species and low open space, the number of settles is kept low because the open space constraint limits the ability for settler to settle. When open space increases, in order to keep settlers low, more local species are needed. Implying some level of maximum species co-existing on a single plate. Therefore, more local species richness results in fewer settlers on the plate. 
+
+N.B. this plot was not used in lecture, but is part of the emmeans package. I took the code from there, page 31 as an easier way to produce a similar plot shown in class.  
+(https://cran.r-project.org/web/packages/emmeans/emmeans.pdf)
+```{r}
+emmip(model2, richness ~ open_space, 
+      CIs = TRUE, 
+      type = "response")
+```
+
+
+
+
+
+

@@ -1,0 +1,158 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+author: "Staff member responsible for this workshop: Jonathan Godfrey a.j.godfrey@massey.ac.nz"
+date: "last updated 26 February 2026"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight_style: pygments
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and any external images.
+- Before you proceed, test the template works for you, and fix any errors.
+- If a link to download the data is given as part of the practical exercise, save it in the same folder as this template file, and adjust the command that reads in the data. That command currently matches the way my files are stored on my computer.
+
+
+```{r}
+
+```
+
+# Practical Exercise: Uniformity trials 1 
+
+This exercise is useful for the following courses:
+
+- 161.222;
+- 161.228;
+-  and general revision on experimental design topics.
+
+## Aims of this practical exercise
+
+
+In this exercise you will:
+
+- fit and validate linear models,
+- determine what changes need to be made to the linear models.
+
+
+## Before you undertake this exercise...
+
+You will need to make sure several packages are ready for use in this exercise:
+
+
+```{r}
+library(tidyverse)
+library(ggfortify)
+library(agridat)
+```
+
+##  Description of a uniformity trial
+
+
+Uniformity trials are conducted to assure researchers that the raw material to be used as experimental units is either homogeneous, or if it is not homogeneous, then how the proposed experimental units differ.
+
+The most common use of uniformity trials  has been for agricultural research, but they could be used for considerably more contexts.
+
+One benefit of understanding how an area of land differs, perhaps in its fertility, could be to establish the shape and size of areas to use as experimental units.
+
+For the purposes of this exercise, we are only interested in understanding if and perhaps how an area varies.
+
+
+### An example
+
+
+The `agridat` package has numerous datasets used in the literature. We use the `baker.strawberry.uniformity` set in this exercise. Read its (very) brief description on its help page. It has results from two trials, but we will use just the first trial.
+
+Get the data ready to use:
+
+
+```{r}
+data(baker.strawberry.uniformity, package="agridat")
+Trial1 <- baker.strawberry.uniformity  |>
+filter(trial == "T1")|> glimpse()
+```
+
+Let's quickly review use of `ggplot()` to draw a graph of this data.
+
+
+```{r}
+Trial1 |> ggplot(aes(y=yield, x=row)) + geom_point() + geom_smooth()
+```
+
+OK, the plot above isn't informative at all. We'll need to add content...
+
+## Things to try
+
+Add an appropriate plotting function to get something useful for the raw data and an indicator of trend. In `ggplot2`, these are created using functions that start with `geom_` and are added on the end using the `+` character to join the bits together.
+
+
+Do it again for the column variable:
+
+
+ 
+## Time for some models
+
+The row and column variables can be used in a linear model. Whether you think it is appropriate or not, fit the following model, and then create the plots that validate its use.
+
+
+```{r}
+Trial1.lm1 = lm(yield~row+col, data=Trial1)
+summary(Trial1.lm1)
+```
+```{r}
+plot(Trial1.lm1)
+```
+
+
+N.B. You need to look at the residuals for this model.
+
+
+Now fit the model:
+
+
+```{r}
+Trial1.lm2 = lm(yield~row*col, data=Trial1)
+summary(Trial1.lm2)
+```
+```{r}
+plot(Trial1.lm2)
+```
+
+
+
+Q: Does this new model improve any issues you were concerned about with the first model?
+
+
+A: minor improvement in linearity of residuals vs fitted line of fit. Indicating more constant variance. 
+
+Use the `anova()` command to determine if the additional term was worthwhile.
+
+
+Q: You should be able to justify the decision using that hypothesis test. What do you conclude? Hint: a small p value indicates the extra complexity of hte second model is justified.
+
+```{r}
+anova(Trial1.lm1, Trial1.lm2)
+```
+A: The new term does imporve the fit
+
+
+## Extension
+
+In the [extension exercise](https://r-resources.massey.ac.nz/practicals/uniformity2.html) you will change the way we think about the row and column variables which were treated as numeric variables.  If you already know about factors, you should look at that extension exercise now.
+
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/practicals/Uniformity1-sols.html)

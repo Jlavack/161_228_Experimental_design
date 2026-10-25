@@ -1,0 +1,145 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+subtitle: 161.222 Design and Analysis of Experiments and 228.371 Statistical Modelling...
+author: "Staff member responsible for this workshop: Jonathan Godfrey a.j.godfrey@massey.ac.nz"
+date: "last updated 17 February 2025"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and images.
+- Before you proceed, test the template works for you, and fix any errors.
+
+
+# Practical Exercise: A screening experiment 
+
+
+## Aims of this practical exercise
+
+
+In this exercise you will:
+
+- see a screening experiment in action.
+
+## Before you undertake this exercise...
+
+
+Get the necessary add-on packages:
+
+
+## Coils experiment
+
+This experiment was conducted to minimise the scrap rate, measured by the reject percentage.
+
+
+Process parameters	| Labels	| Low level	| High level
+--- | --- | --- | --- 
+Felt lubrication	| A	| Dry	| Soaked
+Wire diameter	| B	| 0.75 mm	| 0.76 mm
+Friction on pulley	| C	| Low	| High
+Brake tension	| D	| 1.5 kg	| 2 kg
+Winding width	| E	| High	| Low
+Dirt buildup	| F	| Unclean	| Clean
+Axial start position	| G	| A	| B
+
+
+``` {r}
+Coils = read.csv("Coils.csv") |>
+glimpse()
+```
+
+## Required
+
+Q: Find the significant factors for this experiment.
+```{r}
+model <- lm(Rejects ~ A*B*C*D*E*F*G, data = Coils)
+aliases(model)
+anova(model)
+```
+
+```{r}
+DanielPlot((model), half = TRUE)
+
+```
+
+```{r, fig.width=20}
+effects <- coef(model)[-1]
+effects_clean <- effects[!is.na(effects)]
+
+# Generate Lenth plot
+BsMD::LenthPlot(effects_clean, yaxt = "n", ylab = "effects")
+
+```
+
+
+```{r}
+null_model <- lm(Rejects ~ 1, data = Coils)
+
+# Perform forward stepwise selection
+summary(step(null_model, scope = ~ A*B*C*D*E*F*G, direction = "forward", trace = 0))
+```
+```{r}
+summary(null_model)
+```
+
+
+```{r}
+model2 <- lm(Rejects~ B*D*G, data = Coils)
+anova(model2)
+coef(model2)
+summary(model2)
+```
+
+```{r}
+MEPlot(model2)
+```
+
+```{r}
+IAPlot(model2)
+```
+
+```{r}
+BsMD::LenthPlot(model2)
+```
+
+```{r}
+DanielPlot((model2), half = TRUE)
+```
+
+No significant factors. 
+
+
+Q: What if you are a little more conservative given this is ascreening experiment. Relax the significance level to 10% and determine which factors hsould be further examined.
+```{r}
+BsMD::LenthPlot(model2, alpha = 0.10)
+```
+
+```{r}
+DanielPlot(model2, alpha = 0.20)
+```
+
+still no change. 
+
+Q: Given your findings, what do you recommend for the settings of the factors?
+Nothing really matters, need more data. 
+
+Try wire diameter high and brake tension anda xial start point low. 
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/161222/practicals/Coils-sols.html)

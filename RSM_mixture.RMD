@@ -1,0 +1,200 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+subtitle: 161.228 Design and Analysis of Experiments 
+author: "Staff member responsible for this workshop: Michelle Marraffini m.marraffini@massey.ac.nz"
+date: "last updated 26 March 2026"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+## RSM and Mixture Experiments
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+## Before you undertake this exercise...
+
+Be sure to download this code template `r xfun::embed_file("RSM_mixture.RMD")` to complete this practical exercise.
+
+Get the necessary add-on packages:
+
+```{r getLibs}
+library(rsm)
+library(modelsummary)
+library(broom)
+library(ggeffects)
+library(tidyverse)
+```
+
+
+## Extraction of Antibodies
+
+`r xfun::embed_file("Antibodies.csv")` to complete this practical exercise.
+
+Data Source: Paula A.J. Rosa, Ana M. Azevedo, M. Raquel Aires-Barros,  (2007) "Application of central composite design to the optimisation of aqueous two-phase extraction of human antibodies", *Journal of Chromatography A*, **1141**, 50-60. https://www.sciencedirect.com/science/article/pii/S0021967306022163
+
+
+```{r getAntibodies, echo=TRUE}
+Antibodies = read.csv("Antibodies.csv") |>
+glimpse()
+```
+
+Controlled variables:
+
+`X1` = Phosphate concentration, `X2` = PEG concentration, `X3` = pH, and `X4` = NaCl. concentration
+
+There are also four response variables.
+
+1. Generate RSM models using `Ytop` as the response and preform lack-of-fit tests.
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+
+
+:::
+
+2. Which model is most appropriate? Obtain the model summaries for that model.
+
+::: {#answer}
+
+
+```{r}
+# your code goes here
+```
+
+:::
+
+3. Generate contour plots for your model and the perspective plots.
+
+::: {#answer}
+
+
+```{r}
+# your code goes here
+```
+
+
+:::
+
+4. Find the stationary points for this model.
+
+::: {#answer}
+
+
+```{r}
+# your code goes here
+```
+
+:::
+
+5. Based on the plots and stationary points briefly describe the results of your model. What does this mean for the experiment? 
+
+::: {#answer}
+
+
+
+:::
+
+For Reference:
+The model fitted by the authors for the `Ytop` response is shown below:.
+
+```{r Ytop.rsm4, echo=TRUE}
+Ytop.rsm4 <- lm(Ytop ~ X1+X2+X3+X4+X1:X4+X2:X3+X2:X4+X3:X4, Antibodies)
+Ytop.rsm4 |> coef()
+anova(Ytop.rsm4)
+```
+
+and we can get an attractive graphic summary using:
+
+```{r plotYtop.rsm4}
+library(ggeffects)
+plot(ggeffect(Ytop.rsm4, terms = ~X4+X1))
+```
+
+
+
+```{r contourYtop.rsm4, echo=TRUE}
+par(mfrow=c(1,2))
+contour(Ytop.rsm4, X2~X4, image=TRUE)
+persp(Ytop.rsm4, X2~X4, image=TRUE, contours="colors")
+```
+
+## Mixture experiment:
+You will need to `r xfun::embed_file("Margarita.csv")` to complete this practical exercise.
+
+In mixture experiments we are looking at components that sum to one.
+
+```{r mix lib}
+library(mixexp)
+```
+
+The four ingredients used in a margarita are 1) margarita mix (sour mix), 2) Tequila, 3) triple sec, and 4) lime juice. The mixture is a constrained mixture experiment as the minimum and maximum percentages of the drink are established for each of the four ingredients.
+
+```{r}
+Margarita = read.csv("Margarita.csv") |>
+glimpse()
+```
+
+
+Note that the data has the four ingredients in two forms. First, the percentage of the volume is given, and second, the relative contribution (Pseudo components) to the portion of the mix that is actually being altered. The Pseudo components are used in modelling the problem.
+
+
+There are two response variables on offer in this data. We will use `Ranking` which is the method that forces each respondent to rank the recipes from best to worst (1-15), and then averages over the participants. We are told the fifteen participants were given the samples in random order.
+
+1. Investigate the design. What types of points for mixtures should you expect, and are they all present?
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+
+:::
+
+
+2. Find a sensible  mixture model for this data. The first model you should try is:
+
+```{r}
+mixvars<-c("MmixPC", "TequilaPC", "TripleSecPC", "LimeJuicePC")
+Margarita.mix1 = MixModel(Margarita, "Ranking", mixvars, model=1)
+Margarita.mix1 |> anova()
+```
+
+Now design your own model. Compare these models
+
+::: {#answer}
+
+
+```{r}
+# your code goes here
+```
+
+:::
+
+
+
+3. Make an effects plot for your model above. The `mixexp` package is not very flexible with variable names. In order to make the effects plot, you will need to create a dataset which uses bland variable names. 
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+
+:::
+
+4. The authors found the solution to this problem using the Design-Expert software to be x1 (margarita mix) = 55.00%, x2 (tequila) = 25.67%, x3 (Triple Sec) = 9.33%, and x4 (lime juice) = 10.00%. At this point, the predicted value of goodness is 5.9 and the predicted ranking is 4.7. How do your results compare? 
+
+::: {#answer}
+
+
+:::

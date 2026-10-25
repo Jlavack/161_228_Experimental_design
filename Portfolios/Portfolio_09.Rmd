@@ -1,0 +1,128 @@
+---
+title: "Portfolio_09"
+author: "John Lavack 20001249"
+date: "2026-05-20"
+output: html_document
+---
+
+
+```{r embed the excel}
+xfun::embed_file("C:/Users/johnl/Documents/Computer_science/161_228_Experimental_Design/pbma.xlsx")
+```
+
+
+```{r setup, include=TRUE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.width = 8,    
+  fig.height = 6, 
+  fig.align = "center"
+)
+
+library(tidyverse)
+library(readxl)
+library(factoextra)
+
+pbma <- read_xlsx("C:/Users/johnl/Documents/Computer_science/161_228_Experimental_Design/pbma.xlsx", sheet = "Texture attributes") 
+pbma <- pbma %>% select(-option) #removing the name of the row
+
+#getting liking now
+deliciousness <- read_xlsx("C:/Users/johnl/Documents/Computer_science/161_228_Experimental_Design/pbma.xlsx", sheet = "Liking")[,2] 
+liking <- unlist(deliciousness)
+
+pbma
+#note, no scaling is necessary as all data are on the same scale
+```
+
+`r xfun::embed_file("C:/Users/johnl/Documents/Computer_science/161_228_Experimental_Design/pbma.xlsx")`
+
+
+
+# PCA
+
+
+```{r pca model}
+pca <- prcomp(pbma)
+broom::tidy(prcomp(pbma), matrix = "pcs") #does the same as summary(pca), but tidy
+```
+
+```{r scree plot}
+fviz_screeplot(pca)
+```
+
+# Number of PCS
+There are many contributing PCs in this data for textural element of the reconstituted and hyper-processed vegetable food matter (meat MUST come from an animal, that is that). The scree plot does not show a clear elbow. Instead, by looking at the cumulative variance explained by each successive PC, I think four is a good number. This covers 81% of the variation in the data. Six is another possible choice, as those six PCs cover 92% of the variation. However, for this portfolio, I will choose the fewer PC option in order to make this a shorter document. 
+
+# Plots
+
+Narrative not required. Only plots shown. However, it is interesting to note that the gluey/slimy texture is consistently pointing towards high values of likeness. By the time we get to dimension 4, the plots begin to have seemingly opposing textural combos being close to one another. Sticky and crumbly, chunky and small grained, doughy and fibrous, doughy and crumbly are two obviously unnatural examples, but the food being testing is an unnatural concoction, so who knows, maybe it is. Or maybe the data entry had some errors or the judges were confused and introduced some weird values. The last two plots don't really reveal much new information. So perhaps I'd choose three PCs for ease of communication were I to have to publish these results. 
+
+```{r}
+#I am going to add the liking color to these biplots in order to avoid making loads of plots. 
+fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(1, 2), 
+                col.ind = liking,
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 1 and 2") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+```
+
+```{r}
+fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(1, 3), 
+                col.ind = liking,
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 1 and 3") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+```
+
+
+```{r}
+fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(1, 4), 
+                col.ind = liking,
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 1 and 4") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+```
+
+```{r}
+fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(2, 3), 
+                col.ind = liking,
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 2 and 3") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+```
+
+```{r}
+fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(2, 4), 
+                col.ind = liking,
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 2 and 4") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+```
+
+```{r}
+fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(3, 4), 
+                col.ind = liking,
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 3 and 4") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+```
+
+

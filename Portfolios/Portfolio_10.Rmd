@@ -1,0 +1,145 @@
+---
+title: "Portfolio_10"
+author: "John Lavack 20001249"
+date: "2026-05-20"
+output: html_document
+---
+
+
+```{r embed the excel}
+xfun::embed_file("C:/Users/johnl/Documents/Computer_science/161_228_Experimental_Design/pbma.xlsx")
+```
+
+
+```{r setup, include=TRUE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  fig.width = 10,    
+  fig.height = 8, 
+  fig.align = "center"
+)
+
+library(tidyverse)
+library(readxl)
+library(broom)
+library(factoextra)
+
+pbma <- read_xlsx("C:/Users/johnl/Documents/Computer_science/161_228_Experimental_Design/pbma.xlsx", sheet = "Texture attributes") 
+pbma <- pbma %>% select(-option) #removing the name of the row
+
+#getting liking now
+deliciousness <- read_xlsx("C:/Users/johnl/Documents/Computer_science/161_228_Experimental_Design/pbma.xlsx", sheet = "Liking")[,2] 
+liking <- unlist(deliciousness)
+
+pbma
+#note, no scaling is necessary as all data are on the same scale
+```
+
+`r xfun::embed_file("C:/Users/johnl/Documents/Computer_science/161_228_Experimental_Design/pbma.xlsx")`
+
+# Portfolio 9 content
+Note, in portfolio 9 I decided to show 4 PCs, but 3 would probably have also been enough. In this portfolio, I use three PCs, to make the interpretation simpler. Three PCs account for 71% of variation. I am happy to leave 30% variation on the floor in the scope of this portfolio. 
+
+## PCA
+
+
+```{r pca model}
+pca <- prcomp(pbma)
+tidy(prcomp(pbma), matrix = "pcs") #does the same as summary(pca), but tidy
+```
+
+```{r scree plot}
+fviz_screeplot(pca)
+```
+
+## Number of PCS
+There are many contributing PCs in this data for textural element of the reconstituted and hyper-processed vegetable food matter (meat MUST come from an animal, that is that). The scree plot does not show a clear elbow. Instead, by looking at the cumulative variance explained by each successive PC, I think four is a good number. This covers 81% of the variation in the data. Six is another possible choice, as those six PCs cover 92% of the variation. However, for this portfolio, I will choose the fewer PC option in order to make this a shorter document. 
+
+## Plots
+
+
+```{r}
+#I am going to add the liking color to these biplots in order to avoid making loads of plots. 
+fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(1, 2), 
+                col.ind = liking,
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 1 and 2") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+#next pcs, 1 and 3
+fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(1, 3), 
+                col.ind = liking,
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 1 and 3") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+#next pcs, 2 and 3
+fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(2, 3), 
+                col.ind = liking,
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = "PCA Biplot PCs 2 and 3") + #colors from viridis, viridis::viridis and magma
+  coord_equal()
+
+
+```
+
+
+# Portfolio 10 content:
+
+For PC1, chewiness accounts for 0.51 of the variance in the positive pole, then a fibrous texture accounts for 0.29, followed by moist and greasy with 0.21 each. On the negative pole it is small grains (0.48), pasty (0.32) and gluey (0.22). However, in the PCA plots for PCs 1 and 2 and PCs 1 and 3, the higher liking scores are mostly in the direction of these negative poles. With the midrange (50 - 75%) more often in the areas of the positive poles.
+
+For PC2 the top textural components are moist, soft, tender and gluey (0.37, 0.31, 0.26 and 0,25) in the positive pole and dry, crumbly and fibrous (0.5, 0.4, 0.21) in the negative pole. In PCA plot for PCs 1 and 2, it may be that the second PC is shifting the likeness scores to be clustering around the positive PC2 and negative PC1 quadrant in the direction of gluey, and soft. While the top right quadrant has the 50-75% likeness with moist and tender textures. However, that PC plot is quite scattered. In the PC plot for PC2 and PC3 most of the higher scores are in the lower quadrants, negative PC3. 
+
+For PC3, the top two textures are crispy and greasy (0.5, 0.2) in the positive pole and in the negative pole it is small grains, dense, chunky and hold together (0.46, 0.4, 0.34, 0.27). In the PC plot for 1 and 3, we can see that most high likeness scores (> 50%) are in the direction of these negative PC3 textures. In the lower two quadrants. The same is true in the PC plot for PCs 2 and 3. 
+
+These results are not intuitive. It tells me that either there is something wrong in the measurement or the higher valued textures on the poles are being overwhelmed by the collective impact of the central textures. I think that perhaps the likeness scores are incorrect. Because in the first PC plot (pcs 1 and 2) the high scores are mostly in the negative PC1 and positive PC2 quadrant with gluey and pasty textures. Not what one wants from something that is trying to mimic bacon.  
+In the second plot the higher values are associated with coarse, grainy, dense and chewy textures. While lower likeness values are in the direction of crispy and moist (and also gluey, pasty and sticky).  
+In the third plot (pcs 2 and 3) it is the same as the second plot. Crispy textures are associated with low likeness. Here at least moist and tender are associated with high likeness scores. 
+
+I must conclude that either the data for likeness has been contaminated, or the tasters had no idea what they were doing. Pasty bacon... yuck!  
+It is also possible that texture was not a large contributor to the likeness score overall, and hence these unintuitive results. Maybe something like flavor simply dominated the likeness scores and texture was a lesser partner. 
+
+
+```{r PCA roation}
+# This does the same as sort(pca$rotation[, 1], decreasing = TRUE), but gets a nice output. 
+pc1 <- tidy(pca, matrix = "rotation") %>% 
+  filter(PC == 1) %>%
+  arrange(desc(value))
+
+pc2 <- tidy(pca, matrix = "rotation") %>%
+  filter(PC == 2) %>%
+  arrange(desc(value))
+
+pc3 <- tidy(pca, matrix = "rotation") %>%
+  filter(PC == 3) %>%
+  arrange(desc(value))
+
+pc1
+pc2
+pc3
+
+```
+
+
+This graph below gives a view of the PC loadings side by side. Looking at the loadings, the values that are high are typically associated with good bacon qualities: crispiness, moist and tender, but the odd ones are there too, gluey and chewy. So we have the same unintuitive result as mentioned above. 
+
+```{r pc loading viz, fig.width=10, fig.height=8}
+pc_loading <- bind_rows(pc1, pc2, pc3)
+
+pc_loading %>% 
+  ggplot(aes(x=column, y = value, ymin = 0, ymax = value, col = as.factor(PC), group = as.factor(PC))) +
+  geom_linerange(position = position_dodge(width = 0.5)) +
+  geom_point(position = position_dodge(width = 0.5)) +
+  theme_minimal() +
+  labs(color= 'PC',
+       title = 'PC loadings for textural values of PCA analysis',
+       x ='') +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+

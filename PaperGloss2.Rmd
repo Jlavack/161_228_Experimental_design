@@ -1,0 +1,150 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+author: "Staff member responsible for this workshop: Jonathan Godfrey a.j.godfrey@massey.ac.nz"
+date: "last updated 04 March 2025"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and images.
+- Before you proceed, test the template works for you, and fix any errors.
+
+
+# Practical Exercise: Blocking in 2^k^ experiments 
+
+This exercise is useful for the following courses:
+
+- 161.222;
+- 228.371;
+- and general revision on experimental design topics.
+
+## Aims of this practical exercise
+
+
+In this exercise you will:
+
+- fit the model for a randomised complete block experiment, using multiple treatment factors this time;
+- investigate main effects and interaction plots; and,
+- find the treatment means and their standard errors.
+
+
+## Before you undertake this exercise...
+
+Let's load the packages we will need.
+
+
+``` {r}
+library(tidyverse)
+library(janitor) 
+library(ggfortify)
+library(FrF2)
+library(emmeans)
+```
+
+
+## The Paper gloss dataset (revisited)
+
+The dataset is from a paper plant which produces large rolls of paper. The paper is run through a machine called a 'super calendar' to provide a gloss to the paper. The response variable is the gloss of the paper. 
+
+When we used this dataset before, the treatment variables speed (S), pressure (P), and temperature (T) were combined together into a single treatment factor called Treatment. For example, Treatment 1 was low-speed, low-pressure and low-temperature, while treatment 8 was high-speed, high-pressure, high temperature. Let's use the three factors now.
+
+### Data Preparation
+
+
+Recall that there were 3 replicate measurements taken of the paper's gloss on each day, For each treatment combination. The data was presented in a wide format. The data manipulations done previously for this data are condensed below.
+
+
+``` {r}
+Paper <-read.csv("https://R-Resources.massey.ac.nz/reworked/SandersEtAl2002.csv") |>
+    mutate(across(c(Day:Treatment), factor)) |> 
+    pivot_longer(cols=c(Rep1,Rep2,Rep3),values_to = "Gloss",names_to = "Replicate") |> 
+    arrange(Day,Treatment,Replicate) |>
+    glimpse()
+```
+
+## The model
+
+Fit the linear model suitable for this randomised complete block design, using the three two-level factors and their interactions.
+
+
+You should also check out the residual analysis for this model.
+
+```{r}
+Paper.lm1 <- lm(Gloss ~ Day + S *P*I, data = Paper)
+anova(Paper.lm1)
+```
+There are significant main effects, but no significant interaction effects. 
+
+Linear model assumptions appear to be met. 
+
+```{r}
+plot(Paper.lm1)
+```
+
+
+## Suitable graphs
+
+Generate the main effects and interaction plots for this data. Make sure you have the right packages loaded.
+
+
+```{r}
+MEPlot(Paper.lm1)
+```
+
+```{r}
+IAPlot(Paper.lm1)
+```
+The main effects are noteworthy, but interactions effects are not. 
+
+
+#### Calculating marginal means
+
+We need to think differently when we calculate the mean effect of each treatment. Do we need to use interactions? Can we ignore other factors?
+
+We will use the `emmeans()` package again.
+
+For example, if we could be sure that speed has no interaction with other factors, we would use:
+
+
+``` {r}
+emmeans(Paper.lm1, "S")
+plot(emmeans(Paper.lm1, "S"))
+```
+
+```{r}
+Paper.lm2 <- lm(Gloss ~ Day + S + P + I, data = Paper)
+anova(Paper.lm2)
+```
+```{r}
+plot(emmeans(Paper.lm1, "S"))
+plot(emmeans(Paper.lm1, "P"))
+plot(emmeans(Paper.lm1, "I"))
+```
+
+
+N.B. This command will throw warnings if the model used has interactions which have an impact on the factor being considered. Before you implement the command, fit the model that includes only the significant effects.
+
+```{r}
+plot(emmeans(Paper.lm1, c("S", "P", "I")))
+```
+
+
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/practicals/PaperGloss2-sols.html)

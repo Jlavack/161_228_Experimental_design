@@ -1,0 +1,921 @@
+---
+title: "Assignment2_161228_S1_2026"
+author: "John Lavack 20001249"
+date: "Final submission on 20 May 2026, 11:59pm"
+output: 
+  html_document:
+    toc: true
+    toc_float: true  
+    toc_depth: 3   
+    number_sections: false 
+---
+
+```{r pkgs, echo=TRUE, eval=TRUE, results="hide", message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rsm)
+library(mixexp)
+library(knitr)
+library(broom)
+library(sjPlot)
+#gg tern documentation reference: https://cran.r-project.org/web/packages/ggtern/refman/ggtern.html
+library(ggtern)
+```
+
+
+## Instructions
+
+There are five questions below. You will be marked on three out of five. Marks will be awarded to the first three answers, i.e. completing all exercises will not result in more marks. Each question is worth the same total marks and contain multiple pieces.
+
+You will only gain credit for thinking and code that is consistent with the 161.228 course material.
+
+You must render your document and upload the html file to the dropbox to receive credit.
+
+Keep this line to have the RMD file automatically included in your html `r xfun::embed_file(knitr::current_input())`.
+
+*NOTE* do NOT delete anything above this line.
+
+Download the R markdown template here `r xfun::embed_file(knitr::current_input())` to begin your workings.
+
+------------------------------------------------------------------------
+
+## Question 1: Cattle diet [18 marks]
+
+Make use of the material found at `r xfun::embed_file("Talbotetal2020.Rmd")`
+
+This will give you the data required in csv format, the abstract of the original article and some brief details about the experimental design.
+
+<https://link.springer.com/article/10.1007/s10705-020-10050-4>
+
+a.  Complete an analysis including the two treatments (crop and urine) and time (no other variables), what is the model structure? Why did you chose this analysis setup? [3 marks]
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+:::
+
+b.  Describe the significant effects for this experiment? Does this match the authors' findings? [3 marks]
+
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+:::
+
+c.  What is the variable `Batch` in the data? Explore this variable with table(s) and/or plot(s). Should you include it in your model? [4 marks]
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+:::
+
+d.  Consider the variable `Block` in the data, the authors state "Soil samples were taken from the soil blocks to elucidate the mechanisms involved in the transformation of soil mineral N. Samples were taken using a soil corer (100 mm depth, 75 mm diameter)...". If you were to add this to your analysis, what your model structure be and why? (note this question does not ask you to run the model) [4 marks]
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+:::
+
+e.  Re-run your analysis from question one, including `Block` as a random effect. Does this influence your conclusions? Briefly compare the two models (with and without `Block`). [4 marks]
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+:::
+
+------------------------------------------------------------------------
+
+## Question 2: Quit Smoking [18 marks]
+
+A researcher is testing drugs that help fight nicotine cravings in people of different ages trying to stop smoking. Patients report the number of cravings they had over the month. Patients are grouped by age (20-29, 30-39, 40-49, 50+).
+
+Use the data that corresponds to your id number on Stream to answer the questions below.
+
+a.  Fit a linear model and test the assumptions. Does the data meet the assumptions of a linear model? Briefly discuss the assumptions and how you tested them (3-5 sentences). [3 marks]
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+:::
+
+b.  Briefly discuss 3 options for how to deal with non-normal response variables described in this course. Which would be best for this data set? Perform a box-cox transformation, briefly discuss the implications of these results for analysis. [3 marks]
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+:::
+
+c.  Perform a generalized linear model on the data; briefly compare the results and conclusions from this analysis to the analysis you completed for part 1. State your conclusions. [4 marks]
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+:::
+
+d.  Treating this as a repeated measures design, describe the random effect structure of this experiment. Support your answer with `lmer` or `nlme` code. Produce a plot you might use to illustrate the results of the repeated measures analysis to a general audience. Describe what plot you chose and what it illustrates. (note you can make random data to use for the plot) What from previous questions might you be concerned about but do not know how to deal with? [4 marks]
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+:::
+
+e.  Treating this as a cross-over design, what additional design features should you consider and why? In order to measure all possible carry-over effects in a cross-over design how many time points and subjects would you recommend the researcher include in the study? Generate a data table to illustrate a recommended setup. [4 marks]
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+:::
+
+------------------------------------------------------------------------
+
+## Question 3: Whiskey, Bourbon, and Rye, o my [18 marks]
+
+Whiskey is a type of liquor made from fermented grain mash. Various grains (which may be malted) are used for different varieties, including barley, corn, rye, and wheat. Bourbon whiskey is a barrel-aged American whiskey made primarily from corn (maize). To be legally considered bourbon it must contain 51% corn. A distiller is experimenting with consumer preference for different recipes, for simplicity she keeps corn at 51% and varies the proportions of the remaining grains. She asks consumers to rate smoothness/flavor score (0-10) for each sample.
+
+Use the data that corresponds to your id number on Stream to answer the questions below.
+```{r read Q3 data}
+Q3_data <- read.csv("Bourbon/BourbonMix2649.csv")
+Q3_data %>% glimpse()
+```
+
+
+a.  What is the difference between a simplex lattice design and a simplex centroid design? Which one was used here, and what are the tradeoffs? Describe the experimental design using terminology presented in the course. [3 marks]
+
+
+::: {#answer}
+
+The lattice design aims to create a grid evenly spaces around the coordinate space. 
+
+The centroid design has a centroid point which is an even mix of all components. It then uses all possible ways of having each component be zero.
+
+Because the mixture points are evenly spread at 0.2 intervals and the design diagram has no centroid points, this experiment uses a simplex lattice design. 
+
+```{r Question 3 a}
+# your code goes here
+#one of the other packages has masked dplyr's select function. 
+Q3_data %>% dplyr::select(rye, wheat, barley) %>% rename(X1=rye, X2=wheat, X3=barley) %>% DesignPoints()
+
+```
+
+:::
+
+b.  Fit the linear Scheffé model to the data, write out the equation and interpret each coefficient. What does the coefficient on `rye` actually mean in a mixture context --- is it the same as a slope in regular regression? [3 marks]
+
+::: {#answer}
+
+```{r Question 3 b}
+# your code goes here
+mixvars<-c("rye", "wheat", "barley")
+Q3_model_L <- MixModel(Q3_data, "flavor", mixvars, model=1)
+Q3_model_L %>% anova()
+```
+### Linear model formula:
+
+
+$$
+y = \beta_{rye}x_{rye} + \beta_{wheat}x_{wheat} + \beta_{barley}x_{barley} + \epsilon
+$$
+
+<br>
+
+### Linaer Bourbon Model:
+$$
+y = 4.956 \cdot x_{rye} + 4.255\cdot x_{wheat} + 3.317 \cdot x_{barley} + \epsilon
+$$
+
+where  $x_{rye} + x_{wheat} + x_{barley} =1$, and all $x \geq 0$
+
+<br> 
+
+The coefficient of 4.96 for rye in the mixture model is the predicted flavor when the wheat and barley components are set to 0, they aren't in the mixture. When the mixture contains 100% rye (which in this case is 49% rye and 51% corn), then the predicted flavor based on the experimental results is 4.96.   
+This is not the same as a standard linear model, where the coefficients represent the slopes of the $\beta$ variables. That is, the change in the response variable per unit change in the associated predictor variable.  
+The difference is because in the Scheffe model, all x components must sum to 1. Therefore the coefficients are pure mixtures where the others are set to 0. So when the x value changes the multiplication is a percentage of the coefficient + the relevant percentages of the other coefficients, so long as all x values sum to 1. This means that all the predictors are dependent on one another. They have a very specific range of values they can occupy. In a linear model the predictors are independent. And in theory, have an unlimited range of values. 
+
+<br>
+
+:::
+
+c.  Fit a quadratic Scheffé model. Which interaction term is largest? What does that suggest about how those grains interact to affect flavor? [3 marks]
+
+::: {#answer}
+
+```{r Question 3 c}
+# your code goes here
+Q3_model_P <- MixModel(Q3_data, "flavor", mixvars, model=2)
+Q3_model_P %>% anova()
+```
+
+### Quadratic model
+$$
+y = 4.322 \cdot x_{rye} + 3.831 \cdot x_{wheat} + 3.204 \cdot x_{barley} + 3.683 \cdot x_{wheat} x_{rye} + 1.743 \cdot x_{barley} x_{rye} + 0.427 \cdot x_{wheat} x_{barley}  + \epsilon
+$$
+
+where  $x_{rye} + x_{wheat} + x_{barley} =1$, and all $x \geq 0$
+
+<br>
+
+The largest interaction term is the wheat:rye interaction. It suggests a strong non-linear (polynomial) blending effect on flavor. Because the coefficient for the interaction component is positive, this indicates a synergistic impact on flavor by including the interaction. So, if all barley terms where set to 0 and rye and wheat were set to 50%, then the flavor with and without the interaction would be: 
+
+```{r}
+a<- 4.96 * 0.5 + 4.26 * 0.5
+b<- 4.96 * 0.5 + 4.26 * 0.5 + 3.68 * 0.25
+
+cat('without interaction: ', a, '\nwith interaction: ', b)
+```
+
+This means that some flavor compounds in rye and wheat are working together to improve flavor when both are present, more so than when only one is, and in a non linear way.
+
+:::
+
+d.  Compare your linear and quadratic models. Which is the best fit for this data? Is the quadratic term significant? What does that tell you about the response surface --- is it flat, or does blending matter? [4 marks]
+
+::: {#answer}
+
+```{r Question 3 d}
+# your code goes here
+anova(Q3_model_L, Q3_model_P)
+```
+
+The polynomial Scheffe model performs better than the linear model, $P = 0.0086$ with $F 5.64$. A significant improvement on the linear model. This implies that the response surface is curved (non linear) and that therefore blending grains is important for maximising flavour.  
+
+Looking at the output from the polynomial model in question 3c, the model shows highly significant individual grain components and an interaction between rye and wheat ($F = 13.479$, $P = 0.002274$), a less significant values rye and barley $F = 3.24$, $P = 0.09$, and an insignificant interaction for wheat and barley  $F = 0.2$, $P = 0.66$)
+Blending matters. And so too does what is blended. 
+
+:::
+
+e.  Your friend argues that the best bourbon will always be at a vertex of the simplex --- i.e., using only one non-corn grain. Using a contour plot and model, do you agree or disagree? Support your answer with specific predicted values. Describe your results for a general audience. [5 marks]
+
+::: {#answer}
+
+```{r Question 3 e}
+# your code goes here
+MixturePlot(
+  x = Q3_data$rye, 
+  y = Q3_data$wheat, 
+  z = Q3_data$barley, 
+  w = Q3_data$flavor, 
+  mod = 2, 
+  cols = T,
+  x1lab = "Fraction Barley",
+  x2lab = "Fraction Wheat",
+  x3lab = "Fraction Rye",
+  corner.labs = c("Rye", "Wheat", "Barley"))
+
+```
+```{r}
+grid <- seq(0, 1, by = 0.05)
+space <- expand.grid(rye = grid, wheat = grid, barley = grid)
+# Keep only rows that sum to 1
+space <- space[rowSums(space) == 1, ]
+
+# Predict 
+space$Prediction <- predict(Q3_model_P, newdata = space)
+space <- space %>% arrange(desc(Prediction))
+
+a <- head(space, 3)
+b <- tail(space, 3)
+c <- space %>% filter(rye == 1)
+d <- space %>% filter(wheat == 1)
+
+points <- rbind(a,b,c,d)
+points
+```
+
+I disagree, Scotch is much better. Bourbon is swill. That aside, according to the experimental data collected, the best blend will be some mixture of rye and wheat. Roughly with 0.55% rye and 0.45% wheat with no barley. The table above shows the top three, bottom three and all pure mixtures. There are 8 rows instead of 9 because pure barley is the worst mixture. Yet, the model has a positive coefficient for barely at 3.2, meaning a blend of barley is better than pure corn bourbon.  
+Looking at the contour plot, this is also the case. The best flavor occurs in the yellow area, where the mixture has some blend of rye and wheat around the 50/50 mark, but veering towards more rye than wheat. 
+
+Counter to my friend's assertion, the vertex blends for rye, wheat and barley have flavor scores of 4.3, 3.8 and 3.2. As mentioned above, pure barlety has the worst flavor in the results. Pure wheat has a low flavor and pure what has a higher, but middling flavor. Therefore, my friend is wrong on the grounds of this experiment's data. 
+
+The below plot shows the plots on the table in red for easier interpretation. The black point shows a hypothetical mixture of 0.05% barley, 0.45% wheat and 0.50% rye as a counter point to show that even a blend of three grains with corn can be considered flavoursome (note that this point is a prediction interpolated from experiment data, there is not point in the experiment that exactly aligns with the point in black). 
+
+
+```{r GG ternery plot}
+ggtern(data = space, aes(x = wheat, y = barley, z = rye)) +
+  geom_point(aes(color = Prediction), size = 15) +
+  geom_point(data = points, size = 2, color = "red", shape = 19) +
+  geom_point(data = data.frame(wheat = 0.45, rye = 0.5, barley = 0.05), size = 2, color = "black", shape = 19) +
+  scale_color_viridis_c() +
+  theme_minimal() +
+  labs(title = "Bourbon Mixture: Prediction Surface",
+       color = "Predicted Response") +
+  theme(legend.position = "right")
+```
+
+
+:::
+
+## Question 4: The way the snack bar crumbles [18 marks]
+
+A food manufacturer is developing a new oat-based snack bar and wants to find the combination of process conditions that maximizes a composite texture score (0--100) assessed by a trained sensory panel. The score captures crunch, cohesion, and mouthfeel --- too soft and the bar falls apart, too hard and it becomes unpleasant to eat. Three process factors are varied:
+
+-   x1 = Oven temperature (°C): 150--190°C -- drives moisture loss and caramelization
+
+-   x2 = Baking time (minutes): 10--22 min -- controls internal set and crust development 
+
+-   x3 = Syrup ratio (honey:sugar, 0.2--0.8): the proportion of the syrup that is honey vs. refined sugar -- affects binding 
+
+Use the data that corresponds to your id number on Stream to answer the questions below.
+
+a.  Fit both a first-order (FO) and second-order (SO) model to your dataset. Carry out a formal F-test comparing the two. Write out your null hypothesis in words, report the F-statistic and p-value, and state your conclusion. [4 marks]
+
+::: {#answer}
+
+```{r}
+# your code goes here
+Q4_data <- read.csv("snackbar/SnackBar2649.csv")
+glimpse(Q4_data)
+```
+<br> <br> 
+
+**Null hypothesis**: is that the addition of the quadratic terms and interaction effects do not significantly improve the fit of the model.  
+
+**Alternative hypothesis**: The additional terms do significantly improve the fit of the model to the data  
+
+For this lack of fit test between the first order and second order models, $F = 99.797,$ and $P = 3.35e-08$.  
+This is a significant result. Therefore, a the second order model with interaction and quadratic terms improves the fit of the model to the data. The alternative hypothesis is accepted. 
+
+
+```{r Q4 models}
+Q4_model_FO <- rsm(texture_score ~ Block + FO(x1, x2, x3), Q4_data)
+
+Q4_model_SO <- rsm(texture_score  ~ Block + SO(x1, x2, x3), Q4_data)
+
+summary(Q4_model_FO)
+
+summary(Q4_model_SO)
+
+```
+
+
+```{r Q4 anova test}
+anova(Q4_model_FO, Q4_model_SO)
+```
+
+
+:::
+
+b.  Fit your second-order model twice: once using the coded variables x1, x2, x3 and once using the natural-unit variables oven_temp, bake_min, syrup_ratio. Compare the coefficient tables. Why are the coded coefficients more useful for deciding which factors matter most? What specific problem arises when you try to directly compare the natural-unit coefficients across the three factors? [4 marks]
+
+::: {#answer}
+
+Coded variables are standardised to allow consistent interpretation across measurement scales. The un-coded variables, oven_temp, bake_min and syrup_ration, are on different measurement scales. Respectively, °C, minutes and honey:sugar as a percentage. Comparing the coefficients in the un-coded model is nonsensical. Especially when bake time has a different range to oven temperature and syrup ratio. A small coefficient in oven temp doesn't and a large one for syrup ratio doesn't mean a weak or strong effect, it may simply mean that a small increase in bake time has a smaller impact than a 1% change in syrup ratio.  
+For example, in the un-coded model oven temp has a coefficient of 5.33 and bake time has a coefficient of 10.37. Does this mean that oven temp is half as influential than bake time? Is oven temp half as influential as bake time?    
+In the coded model oven temp (x1) has a coefficient of 5,29 and bake time (x2) has a coefficient of 4.59. On the same scale they have a more or less similar impact.  
+When standardised to a scale from $-1$ to $+1$ then the relative influence of the process setting can be sensibly interpreted. 
+
+The standardised, coded coefficient table is:
+
+```{r Q4 part b}
+# your code goes here
+Q4_model_SO2 <- rsm(texture_score  ~ Block + SO(oven_temp, bake_min, syrup_ratio), Q4_data)
+
+#coded
+tidy(summary(Q4_model_SO)) %>%
+    mutate(across(where(is.numeric), ~round(., 2))) %>%
+    t() %>%
+    kable()
+
+```
+
+<br>
+
+
+While the un-standardised coefficient table is:
+```{r Q4 part b table uncoded}
+#un-coded
+tidy(summary(Q4_model_SO2)) %>%
+    mutate(across(where(is.numeric), ~round(., 2))) %>%
+    t() %>%
+    kable()
+```
+
+:::
+
+c.  Produce all three pairwise contour plots for the best model (part c) with the third factor held at its centre. For the temperature × time plot: (a) describe the orientation and shape of the contour ellipses, (b) explain what the tilt of the ellipses (if any) tells you about the interaction between those two factors, and (c) identify approximately where the maximum texture score lies on this plot. Compare this to where you would have guessed the optimum was from the linear coefficients alone. [5 marks]
+
+::: {#answer}
+
+```{r Q4 contour plots, fig.height=8, fig.width=9}
+# your code goes here
+# hook code reference: https://cran.r-project.org/web//packages//rsm/vignettes/plots.html
+# I have changed the x1, x2 and x3 labels to their original names, as this makes it easier for me to understand. 
+
+myhook <- list(
+  post.plot = function(lab) {
+    #stationary red point to show where the third variable is at 0
+    idx <- sapply(lab[3:4], function(name) which(names(xs(Q4_model_SO)) == name))
+    points(xs(Q4_model_SO)[idx[1]], xs(Q4_model_SO)[idx[2]], pch = 16, col = "red", cex = 1.2)
+    
+    #dynamic labelling
+     slice_label <- if (grepl("x3", lab[5])) {
+      "slice at Block = 1.4, syrup ratio = 0"
+       } else if (grepl("x2", lab[5])){
+         "slice at Block = 1.4, bake time = 0" 
+       } else { 
+         "slice at Block = 1.4, oven temp = 0"
+       }
+    mtext(slice_label, side = 1, line = 4, cex = 0.9)
+  }
+)
+
+# x1 on x2 with x3 at 0
+par(pty = "s") #square plot to help interpret the slopes better
+contour(Q4_model_SO, ~x1 + x2, 
+        at = list(x3 = 0), 
+        image=TRUE, 
+        main = 'Standardised Oven temp and bake time on texture score contour plot', 
+        xlabs = c("Oven Temp", "Bake time"),
+        hook = myhook, 
+        atpos = 0) #put atpos at end otherwise the hook text won't work.
+
+#x1 on x3 with x2 at 0
+par(pty = "s") 
+contour(Q4_model_SO, ~x1 + x3, 
+        at = list(x2 = 0), 
+        image=TRUE,
+        main = 'Standardised Oven temp and syrup ratio on texture score contour plot', 
+        xlabs = c("Oven Temp", "Syrup ratio"),
+        hook = myhook,
+        atpos = 0)
+
+#x2 on x3 with x1 at 0
+par(pty = "s")
+contour(Q4_model_SO, ~x2 + x3, 
+        at = list(x1 = 0), 
+        image=TRUE,
+        main = 'Standardised bake time and syrup ratio on texture score contour plot', 
+        xlabs = c("Bake time", "Syrup ratio"),
+        hook = myhook,
+        atpos = 0)
+
+```
+
+a) The contour ellipses are on a left to right downwards diagonal roughly at 315 degrees (or -45 degrees). They have a steep ascent from oven temp -1.5 to oven temp -0.25 and bake time -1.5 to bake time 0, shown by closer contour lines. From this point until the maximum the gradient of ascent is very gradual. Indicating a steep climb and a wider top of the 'hill' (3D parabola).  
+The maximum lasts from bake time of roughly 0 to 0.75, and oven temp of roughly 0 to 0.75.
+
+b) The compression of the maximum on the diagonal that passes from the bottom left corner to the top right indicates that as both oven temp and bake time increase together, the maximum is descended from faster than if one is held constant while the other increases within the ranges given earlier. If both increase together, then the maximum begin is descent at the point (0.5, 0.5)
+
+c) The maximum temperature score is approximately at (0.3, 0.35) with the maximum texture score being 75.68. Using linear coefficients alone would not provide a maximum. I'd expect the maximum to be the highest point on a linearly increasing line within the design space. Therefore, the top right corner. This would be at approximately  $2 * 0.066 + 1.63 * 5.29 + 1.63 * 4.59 + 1.63 * -2 + 65.01 = 77.99$ using the linear coefficients from the first order model or $2 * 0.066 + 1.63 * 5.29 + 1.63 * 4.59 + 1.63 * -2 + 73.88 = 86.89$ using the linear coefficients and intercept from the second order model.  
+The linear model predicts a higher score than the second order model, which allows for curvature in the response surface due to the interaction and polynomial terms. Hence the maximum of the second order model is less than the predicted maximum of the linear model. 
+
+
+```{r Q4 part c}
+#get staitonary values
+xs_vals <- xs(Q4_model_SO)
+
+#find the maximum
+new_data <- data.frame(x1 = xs_vals["x1"], x2 = xs_vals["x2"], x3 = 0, Block = 1.4) #x3=0 and block = 1.4 as in the graphs above
+max_response <- predict(Q4_model_SO, newdata = new_data)
+
+print("Stationary point:")
+xs_vals
+print(paste("Maximum texture score:", max_response))
+
+```
+
+
+
+
+:::
+
+d.  Write a concise recommendation --- in plain language without statistical notation --- that tells the product development team: what oven temperature, baking time, and syrup ratio to use; what texture score they can expect at those settings; and how much leeway they have around the optimum before texture score drops noticeably. Use the contour plots you made above to support any claims about sensitivity or robustness. [5 marks]
+
+
+::: {#answer}
+
+```{r Q4 d setup and unstandardisation function}
+# your code goes here
+
+#to answer this question I need to unstandardise the data. I will try the standard formula for standardisation and work backwards to see if it works, then if so, I can use that on the response surface and deliver the company 'plain English" answers. 
+#formula: x = variable - mu / sd
+
+#Here is my process, using x1 and oven temp as an exmaple. 
+# because x1 is standardised, it's mid point will be the mean. This is 0. When x1 = 0, oven_temp is 170. 
+# rearranging the standardisation formula to find sigma si the next step. Pick a value of x1 that is easy... x1=1. 1 becomes the denominator. 
+
+#The testing I did is below, commented out
+#----------TESTING formula---------------
+# mu <- Q4_data$oven_temp[Q4_data$x1 == 0][1] #second square brackets select index 1 element from the array whcich hold 170 many times. 
+# sigma <- (Q4_data$oven_temp[Q4_data$x1 == 1][1] - mu) / 1 #sigma = 20 
+# sigma
+# 
+# #does it work?
+# 1.632993 * sigma + mu #answer is 202.6599. It works. Now make this a formula that can be applied to the rsm data from the chosen model to create another set of data that has been un-standardised. 
+
+#--------------FUNCTION to unstandardise----------------
+unstandardise <- function(data, x, y, z) { #x is the name x1,2,3 and y is the name of the non-standardised column, z is the point to unstandardise
+  df <- data %>% dplyr::select(all_of(x), all_of(y)) %>% unique() #get unique values for easier formula
+  
+  mu <- df[[y]][df[[x]] == 0]
+  sigma <- (df[[y]][df[[x]] == 1] - mu) / 1  #chose easy value for sigma calc
+  
+  return (z * sigma + mu)
+}
+
+#this function is going to be applied to each result in the rsm to help answer the question. It isn't the most efficient way to do this, but it is a quick a nasty way that works.
+
+#next I'll need to get the maximum texture score.
+#because there are two blocks, I will take the average of both. The score for each is around 76, but there is a small block effect.
+
+new_data_1 <- data.frame(x1 = xs_vals["x1"], x2 = xs_vals["x2"], x3 = xs_vals["x3"], Block = 1) 
+max_response_1 <- predict(Q4_model_SO, newdata = new_data)
+
+new_data_2 <- data.frame(x1 = xs_vals["x1"], x2 = xs_vals["x2"], x3 = xs_vals["x3"], Block = 2) 
+max_response_2 <- predict(Q4_model_SO, newdata = new_data)
+```
+
+
+The process settings that provide the best texture score are:   
+
+```{r q4 part d answer P1, optimum settings,  results='hold'}
+# The stationarpoint
+#    x1         x2         x3 
+# 0.3154984  0.3572680 -0.3328362 
+#can call these directly from x_vals from last question.
+print(paste("Optimum Oven Temperature: ", round(unstandardise(Q4_data, 'x1', 'oven_temp', xs_vals[1]),2), "°C"))
+print(paste("Optimum Bake minutes: ", round(unstandardise(Q4_data, 'x2', 'bake_min', xs_vals[2]),2), "minutes"))
+print(paste("Optimum syrup ratio: ", round(unstandardise(Q4_data, 'x3', 'syrup_ratio', xs_vals[3]),2), ":", round(1-unstandardise(Q4_data, 'x3', 'syrup_ratio', xs_vals[3]),2)))
+
+print(paste("Maximum texture score:", round(mean(max_response_1, max_response_2),2)))
+
+```
+
+
+```{r Q4 part d answer P2, bounds, results='hold'}
+# these next two codes chunks are not pretty, but found it easier to use the print() function rather than write it out in a bullet point list. As I was going to need to run the function to get the value anyway, I decided to directly call print and add in the text I was going to write out. 
+#graph 1
+print(paste(
+  "Oven temp must stay between",
+  round(unstandardise(Q4_data, 'x1', 'oven_temp', 0.3),2), "°C and",
+  round(unstandardise(Q4_data, 'x1', 'oven_temp', 0.6),2), "°C"
+  ))
+print(paste(
+  "Bake time must stay between",
+  round(unstandardise(Q4_data, 'x2', 'bake_min', 0),2), "minutes and",
+  round(unstandardise(Q4_data, 'x2', 'bake_min', 0.75),2), "minutes"
+  ))
+print(paste("If syrup is held constant at", round(unstandardise(Q4_data, 'x3', 'syrup_ratio', 0),2),":", round(1- unstandardise(Q4_data, 'x3', 'syrup_ratio', 0),2)))
+
+#graph 2
+print(paste(
+  "Oven temp must stay between",
+  round(unstandardise(Q4_data, 'x1', 'oven_temp', 0.2),2), "°C and",
+  round(unstandardise(Q4_data, 'x1', 'oven_temp', 0.7),2), "°C"
+  ))
+print(paste(
+  "Syrup ratio must stay between",
+  round(unstandardise(Q4_data, 'x3', 'syrup_ratio', -0.6),2), ":", round(1-unstandardise(Q4_data, 'x3', 'syrup_ratio', -0.6),2),
+  "and",
+  round(unstandardise(Q4_data, 'x3', 'syrup_ratio', 0.1),2), ":", round(1-unstandardise(Q4_data, 'x3', 'syrup_ratio', 0.1),2)
+  ))
+print(paste("If bake time constant at", round(unstandardise(Q4_data,'x2','bake_min', 0),2), "minutes"))
+
+#graph 3
+print(paste(
+  "Bake time must stay between",
+  round(unstandardise(Q4_data, 'x2', 'bake_min', 0.2),2), "minutes and",
+  round(unstandardise(Q4_data, 'x2', 'bake_min', 0.7),2), "minutes"
+  ))
+print(paste(
+  "Syrup ratio must stay between",
+  round(unstandardise(Q4_data, 'x3', 'syrup_ratio', -0.8),2), ":", round(1-unstandardise(Q4_data, 'x3', 'syrup_ratio', -0.8),2),
+  "and",
+  round(unstandardise(Q4_data, 'x3', 'syrup_ratio', 0),2), ":", round(1-unstandardise(Q4_data, 'x3', 'syrup_ratio', 0),2)
+  ))
+print(paste("If oven temp is held constant at", round(unstandardise(Q4_data, 'x1', 'oven_temp', 0),2),"°C"))
+```
+However, things interact in complex ways and you will likely vary all variables within certain bounds somewhat as part of standard process randomisation, this is normal as part of process control. So you want to keep each of the settings to between the following boundaries:
+
+```{r Q4 part d answer P3, optmimum boundaries,  results='hold'}
+#oven temp
+print(paste(
+  "Oven temperature should stay between", 
+  round(unstandardise(Q4_data, 'x1', 'oven_temp', 0.2),2), "°C and",
+  round(unstandardise(Q4_data, 'x1', 'oven_temp', 0.5),2), "°C"
+))
+#bake time
+print(paste(
+  "Bake time should stay between",
+  round(unstandardise(Q4_data, 'x2', 'bake_min', 0.2),2), "minutes and",
+  round(unstandardise(Q4_data, 'x2', 'bake_min', 0.5),2), "minutes"
+))
+#syrup
+print(paste(
+  "Syrup ratio should stay between",
+  round(unstandardise(Q4_data, 'x3', 'syrup_ratio', -0.5),2), ":", round(1 - unstandardise(Q4_data, 'x3', 'syrup_ratio', -0.5),2), "and",
+  round(unstandardise(Q4_data, 'x3', 'syrup_ratio', -0.2),2), ":", round(1 - unstandardise(Q4_data, 'x3', 'syrup_ratio', -0.2),2)
+))
+
+```
+Doing so will mean that you will consistently get close to the optimum texture score. Failing to do so will result in rapid decreases in texture score.
+
+:::
+
+------------------------------------------------------------------------
+
+## Question 5: Soldering failures
+
+A electronics manufacturer runs a surface-mount technology (SMT) line assembling printed circuit boards. Quality engineers want to understand which process conditions drive solder joint failure --- a joint either passes visual and electrical inspection (1 = pass) or fails (0 = fail). Rather than tweaking one factor at a time, they run a designed experiment varying three process parameters:
+
+-   x1 = Reflow temperature (°C): peak temperature in the reflow oven (220--260°C) 
+
+-   x2 = Paste volume (µL): solder paste deposited per pad (0.8--2.0 µL)
+
+-   x3 = Conveyor speed (cm/min): speed through the oven (40--80 cm/min)
+
+The true underlying process has a sweet spot --- too hot or too fast causes cold joints and bridging; paste volume has a strong linear effect. The goal is to model the probability of a passing joint as a function of these three factors.
+
+Use the data that corresponds to your id number on Stream to answer the questions below.
+
+
+a.  Explore the data. Describe the experimental design using terminology from the class. How would you analyse this dataset to complete the goal? [3 marks]
+
+
+::: {#answer}
+
+This experiment is a full factorial design with three factors. A $2^3$ full factorial design, as there are three factors and every combination of the factors levels are trialled. This makes $3^3$ possible combinations of factors. Each factor setting is repeated five times in the experiment, resulting in 135 trials. There is replication of each factor level combination, but no randomisation evident in the data as all observations are in ascending factor level order. Factors are orthogonal, as seen in the correlation plot below.  
+
+<br>
+
+To analyse this data, because the response variable has only a binomial output of pass or fail (0 or 1), and given the experiment is about optimising a process's probability of producing a passing result, a generalised linear model using logistic regression will be used. 
+
+
+```{r load Q5 soldering data}
+Q5_data <- read.csv("soldering/Soldering2649.csv") #%>% mutate(x1=as.factor(x1), x2= as.factor(x2), x3 = as.factor(x3))
+glimpse(Q5_data)
+
+#changing the factor levels to make it easier for me to interpret. This doesn't impact the model fit. I checked, 
+# Q5_data$x1 <- factor(Q5_data$x1 , levels = c(-1, 0, 1), labels = c("220°C", "240°C", "260°C"))
+# Q5_data$x2 <- factor(Q5_data$x2 , levels = c(-1, 0, 1), labels = c("0.8 µL", "1.4 µL", "2.0 µL"))
+# Q5_data$x3 <- factor(Q5_data$x3 , levels = c(-1, 0, 1), labels = c("40 cm/min", "60 cm/min", "80 cm/min"))
+
+```
+
+```{r Q5 correlation plot}
+Q5_data %>% select(-x1, -x2, -x3, -pass) %>% cor() %>% corrplot::corrplot()
+```
+
+In the below graphs we see that the data are indeed logistically distributed. 
+
+```{r explore data}
+# your code goes here
+
+library(patchwork)
+P1 <- Q5_data %>% ggplot(aes(y = pass, x = x1)) + geom_point() +
+  labs(title = "Pass rate by \nreflow temperature (°C)")
+
+P2 <- Q5_data %>% ggplot(aes(y = pass, x = x2)) + geom_point() + 
+  labs(title = "Pass rate by \npaste volume (µL)", y = '') +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+P3 <- Q5_data %>% ggplot(aes(y = pass, x = x3)) + geom_point() + 
+  labs(title = "Pass rate by \nconveyor speed (cm/min)", y ='') +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+(P1|P2|P3)
+```
+:::
+
+b.  Complete an appropriate analysis of this dataset. Produce a summary table and results plot. [3 marks]
+
+::: {#answer}
+From the summary table and anova analysis of the model show that the intercept, paste volume and conveyor speed are significant at $P = 0.000975$, $P = 4.37e-09$ and $P = 0.0004$ respectively. The anova chi squared test show significant paste voluem and conveyor speed at $p = 1.631e-13$ and $P = 8.777e-05$ respectvely.  
+
+<br> 
+
+```{r model 1}
+# your code goes here
+Q5_model_1 <- glm(pass ~ x1 + x2 + x3, data = Q5_data, family = binomial(link = "logit"))
+summary(Q5_model_1)
+
+```
+
+```{r anova Q 5}
+anova(Q5_model_1, test = "Chisq")
+
+```
+
+<br>
+
+From summary table the model has a residual deviance of 110.18 on 131 degrees of freedom.  
+With 5% level of significance, the critical value from the chi squared distribution with 131 degrees of freedom is:
+
+```{r}
+qchisq(0.95, 131)
+```
+
+As $158.7$ is larger than the deviance of $110.18$, we have evidence that the model fits well.  
+The residuals show no trends in the residual vs fitted graph, no strong outliers, but the scale location plot shows a slight upward trend. Overall the model appears to be a good fit. 
+
+```{r model analysis}
+plot(Q5_model_1)
+```
+
+Looking at the results plot of the model, it is clear that each group under each condition combination is clearly different at the 95% confidence interval, showing no overlap.
+
+
+
+```{r model 1 results plot}
+plot_model(Q5_model_1, type = "pred", terms = c("x1", "x2", "x3"), ci.lvl = 0.95) + labs(y = "Prob(pass)")
+```
+
+:::
+
+c.  Complete a second more complex model on this dataset. Compare this model to the one you produced in part b using a likelihood ratio test. Is the more complex model warranted? State your hypotheses, report the chi-squared statistic and p-value, and conclude whether the additional terms are warranted. [4 marks]
+
+::: {#answer}
+**Null Hypothesis**: The simpler model fits the data adequately.  
+**Alternative Hypothesis**: The more complex model provides a significantly better fit to the data than the simpler model. 
+
+A chi squared test between the two models yields a chi squared value of $15.899$ with $P = 0.003157$, a significant result. The alternative hypothesis is accepted.   
+
+
+```{r model 2 and lr test}
+# your code goes here
+Q5_model_2 <- glm(pass ~ x1 * x2 * x3, data = Q5_data, family = binomial(link = "logit"))
+
+summary(Q5_model_2)
+
+
+```
+
+```{r}
+#reference for lrtest in lmtest library: https://cran.r-project.org/web/packages/lmtest/refman/lmtest.html
+lmtest::lrtest(Q5_model_1, Q5_model_2)
+```
+
+From summary table the model has a residual deviance of 94.279 on 127 degrees of freedom.  
+With 5% level of significance, the critical value from the chi squared distribution with 127 degrees of freedom is:
+
+```{r}
+qchisq(0.95, 127)
+```
+As this value is larger that the residual deviance value, this model, like the first, if a good fit.  
+
+<br>
+
+A quick look at the residual plots confirms this. These look very similar to the first model's residual plots. 
+
+
+```{r Q5 model 2 resid analysis}
+plot(Q5_model_2)
+```
+
+The below plot show the results of the second, more complex model for reference. It shows that the settings now have some overlap, which is due to the interaction terms. Where before they were horizontal lines, now they have slopes and elbows. For example, in X x3=1 setting, values for x2 = 0 or x2 = -1 almost completely overlap. Only the x2=0 curve's upper 47.5% interval does not. However, in the x3=0 setting, the lines do not overlap, expect minimally on the edges of the x2 = 0 and x2=-1 curve 95% confidence intervals. This added complexity seems more a more realistic way to model three process settings which will no doubt influence each other, than a series of thee horizontal lines as shown in the simpler model. 
+
+```{r model 2 results plot}
+plot_model(Q5_model_2, type = "pred", terms = c("x1", "x2", "x3"), ci.lvl = 0.95) + labs(y = "Prob(pass)")
+
+```
+
+
+:::
+
+d.  Using your fitted *full* model, compute the predicted probability of passing for each of the following specific process settings and report them in a table. Describe what these mean for the manufacturing process. [4 marks]
+
+```{r}
+# Define the four settings in coded units
+settings <- tibble(
+  setting     = c(
+    "All at centre",
+    "High temp, high paste, slow speed",
+    "Low paste, fast speed",
+    "Very high temp, low paste"
+  ),
+  x1 = c( 0,     1,    0,     1.68),
+  x2 = c( 0,     1,   -1,    -1   ),
+  x3 = c( 0,    -1,    1,     0   )
+)
+
+knitr::kable(settings)
+```
+
+::: {#answer}
+
+Under the proposed settings for the process settings, the probability of getting a soldering joint to pass is as shown below.  
+
+- For example, if all settings are at centred, then the probability that the soldered joint would pass is 33%.  
+- If we try with very high temp and low paste volume, then the probability of a passed soldered joint is 0.04%. At least in this model, with the new temperature, that is what this model predicts. Which seems consistent with the brief where too high a temp can lead to failures.  
+- High temp, high paste and slow speed has a probability of 75%. This is consistent with the brief, where there is a supposedly strong linear relationship with passing and paste volume.  
+- While low paste volume and high speed has a pass probability of 0.02%. Probably because of thinly extruded solder. 
+
+
+```{r new setting prediction}
+# your code goes here
+#get predictions and convert to readable valudes with log odds conversion: exp(eta)/(1 + exp(eta)), which is done by type]'response'
+predictions <- predict(Q5_model_2, newdata = settings, type = 'response')
+
+#unstandardising the table settings to be easier to read
+settings <- settings %>% mutate(probability =  round(predictions,2))  %>% 
+  mutate(x1 = unstandardise(Q5_data, 'x1', 'reflow_temp', x1),
+         x2 = unstandardise(Q5_data, 'x2', 'paste_vol', x2),
+         x3 = unstandardise(Q5_data, 'x3', 'conv_speed', x3))
+settings %>% knitr::kable()
+```
+
+
+
+
+:::
+
+e.  The plant manager wants to set a threshold: any process setting where predicted P(pass) \< 0.80 will trigger an automatic line stop. Using your model, identify at least two combinations of factor levels (in natural units) that fall below this threshold. [4 marks]
+
+::: {#answer}
+
+Two settings where the predicted probability of pass is less than 80% are shown in the table below.  
+
+
+```{r Q5 threshold}
+# your code goes here
+#taking the settings above, I assume is not in the spirit of the question. I will do a grid search, then visualise and filter the results to get two settings that fall below the threshold. As would be choosing a setting at -1 for all and some other setting like -1, -1. 0. I have chosen to interpret this question as if the process has more fine-grained control which enables settings on a more or less continuous scale, in order to use the model to interpolate using the experimental results to other, not observed settings. Mainly because I like contour plots, but this was also more fun than picking two settings like those mentoied earlier. 
+
+newdata <- expand.grid(
+  x1 = seq(-1, 1, by = 0.1),
+  x2 = seq(-1, 1, by = 0.1),
+  x3 = seq(-1, 1, by = 0.1))
+
+newdata$predictions <- round(predict(Q5_model_2, newdata = newdata, type = 'response'),2)
+
+newdata <- newdata %>% mutate(
+  x1 = unstandardise(Q5_data, 'x1', 'reflow_temp', x1),
+  x2 = unstandardise(Q5_data, 'x2', 'paste_vol', x2),
+  x3 = unstandardise(Q5_data, 'x3', 'conv_speed', x3)
+  ) 
+
+#there are plenty to choose from, 7959 options. After viewing the data, I chose these two, pretty much at random
+newdata %>% 
+  filter(x1 %in% c(256, 236), x2 %in% c(1.70, 1.46), x3 %in% c(78, 40), predictions %in% c(0.78, 0.54)) %>%
+  rename('Reflow temp' = x1, #renaming for presentation. 
+         'Paste Volume' = x2, 
+         'Conveyor Speed' = x3) %>%
+  
+  knitr::kable()
+
+```
+
+
+The points chosen above are shown in red on the contour plots below. Note, that these could be shown on the sjplot output shown in part c of this question, but I found that these contour plots were easier to interpret, as the question was similar to a response surface methodology situation, just with binomial outcomes rather than continuous ones. 
+
+```{r Q5 final grpahs, warning=FALSE}
+#in the below plots, darker colors are higher probabilities
+#reference for contour plots in the GGplot2 library: https://search.r-project.org/CRAN/refmans/ggplot2/html/geom_contour.html
+ggplot(newdata, aes(x = x1, y = x2, z = predictions)) +
+  geom_contour_filled() +  
+  geom_contour(color = "white", alpha = 0.5) +
+  geom_point(data = data.frame(x1= 236, x2 = 1.46, predictions = 0.78), color = 'red', size = 5) +
+  geom_point(data = data.frame(x1= 256, x2 = 1.70, predictions = 0.54), color = 'red', size = 5, pch = 18) +
+  theme_minimal() +
+  labs(x = 'Reflow Rate', y = 'Paste Volume')
+
+ggplot(newdata, aes(x = x1, y = x3, z = predictions)) +
+  geom_contour_filled() +  
+  geom_point(data = data.frame(x1= 236, x3 = 40, predictions = 0.78), color = 'red', size = 5) +
+  geom_point(data = data.frame(x1= 256, x3 = 78, predictions = 0.54), color = 'red', size = 5, pch = 18) +
+  geom_contour(color = "white", alpha = 0.5) +
+  theme_minimal() +
+  labs(x = 'Reflow Rate', y = 'Conveyor Speed')
+
+ggplot(newdata, aes(x = x2, y = x3, z = predictions)) +
+  geom_contour_filled() + 
+  geom_point(data = data.frame(x2= 1.46, x3 = 40, predictions = 0.78), color = 'red', size = 5) +
+  geom_point(data = data.frame(x2= 1.70, x3 = 78, predictions = 0.54), color = 'red', size = 5, pch = 18) +
+  geom_contour(color = "white", alpha = 0.5) +
+  theme_minimal() +
+  labs(x = 'Paste Volume', y = 'Conveyor Speed')
+```
+
+:::
+
+## Bibliography:
+
+Below is a list of refernces for code used that is not covered in class. 
+
+1. Hamilton. N. (2025, November 11). _An Extension to 'ggplot2', for the Creation of Ternary Diagrams_. https://cran.r-project.org/web/packages/ggtern/refman/ggtern.html  
+
+2. Hothorn, T., Zeileis, A., Farebrother, R. W., Cummins, C., Millo, G., Mitchell, D. (2022, March 21).	_Testing Linear Regression Models_. https://cran.r-project.org/web/packages/lmtest/refman/lmtest.html  
+
+3. Lenth, R. (2025, March 24). _Surface Plots in the rsm Package_. https://cran.r-project.org/web//packages//rsm/vignettes/plots.html
+
+4. Wickham, H., Chang, W., Henry, L., Pedersen, T. L., Takahashi, K., Wilke, C., Woo, K., Yutani, H., Dunnington, D., van den Brand, T.(2026, April 22). _2D contours of a 3D surface_. https://search.r-project.org/CRAN/refmans/ggplot2/html/geom_contour.html 
+
+  
+

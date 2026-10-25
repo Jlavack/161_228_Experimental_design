@@ -1,0 +1,198 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+author: "Staff member responsible for this workshop: Jonathan Godfrey a.j.godfrey@massey.ac.nz"
+date: "last updated 05 March 2026"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight_style: pygments
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and any external images.
+- Before you proceed, test the template works for you, and fix any errors.
+- If a link to download the data is given as part of the practical exercise, save it in the same folder as this template file, and adjust the command that reads in the data. That command currently matches the way my files are stored on my computer.
+
+
+```{r}
+
+```
+
+# Practical Exercise: Completely Randomised Designs (ANOVA) 
+
+This exercise is useful for the following courses:
+
+- 161.222;
+- 161.228;
+- and general revision on experimental design topics.
+
+## Aims of this practical exercise
+
+
+In this exercise you will:
+
+- fit a linear model to a completely randomised design 
+- use tidyverse` a bit more
+- Test for overall differences in the group means
+- Perform contrasts to test for specific differences between all pairs of groups using Tukey's HSD
+
+
+## Before you undertake this exercise...
+
+Let's load the packages we will need.
+
+
+```{r}
+library(tidyverse)
+library(ggfortify)
+library(multcomp)
+library(s20x) # you might need to install this one!
+```
+
+
+## Completely Randomised Designs
+
+In completely randomised designs, the treatments are randomly assigned to the experimental units to avoid confounding by nuisance variables. These experiments can be conducted both in controlled conditions or in the field. Let's look at an ecological experiment in the field.
+
+### Oyster bed experiment
+
+Oyster aquaculture involves placing racks for oyster larvae to settle on. A variety of factors influence how many oysters will attach to a given bed, including the location that the oyster rack is placed within an estuary. This dataset examines the number of oysters settling on racks in 3 locations (31 in Georges River, 24 and 32 at two sites in Port Stephens) in NSW, Australia.
+
+In this case our experimental units are the oyster racks and the treatments are the different sites.
+
+For this experiment, let's assume the researcher wishes to test the null hypothesis that there are no differences in the mean number of oysters recruited between sites. i.e.
+
+$$ H_0: \mu_{GR}=\mu_{PS1}=\mu_{PS2}$$
+Our alternative hypothesis will therefore be that there are differences in the mean number of oysters recruited between *at least some* of the sites.
+
+First, lets take a glimpse at our data
+
+
+```{r}
+data(oysters.df)
+oysters.df |> glimpse()
+```
+
+```
+Rows: 87
+Columns: 2
+$ Site    <fct> GR, GR, GR, GR, GR, GR, GR, GR, GR, GR, GR, GR, GR, GR, GR, GR…
+$ Oysters <int> 25, 24, 25, 14, 23, 24, 24, 25, 43, 24, 30, 21, 55, 33, 27, 18…
+```
+
+We note that we have one categorical variable (`Site`) and one numeric variable (`Oysters`). ***If we want to compare the number of oysters recruited across the sites, what sort of analysis should we be doing?***
+
+
+### Visualise the data
+
+Before we do any analysis, it's always a good idea to plot the data. We want to see if it looks suitable for the analysis we want to use, and to make sure any results we get look like they make sense.
+
+**Lets start by making a boxplot.** Try using the ggplot() function with arguments data=oysters.df and aes(y=Oysters,x=Site) plus geom_boxplot() to produce the plot.
+
+```{r}
+oysters.df %>% ggplot(aes(y = Oysters, x = Site)) + geom_boxplot()
+```
+
+
+### Analysis of Variance
+
+Now that we have seen the data, and have a hypothesis to test, lets fit a linear model and do an analysis of variance to test our main hypothesis.
+
+
+```{r}
+oysters.lm <- lm(Oysters~Site, data=oysters.df)
+anova(oysters.lm)
+```
+
+***Write a short conclusion based on the results of this ANOVA.***
+The anova test shows that there is significant variance between the samples at each site, with F value 109.63 and p value of 2.2e-16
+
+
+We also need to check that the assumptions of ANOVA have not been violated. Our assumptions are:
+
+* Independence: there should be no patterns in the residuals (hard to check when all experimental runs are done concurrently and we have no information on the physical arrangement)
+
+* Equality of variance: the residuals should have equal spread in each group.
+
+* Normality: the residuals should be normally distributed around 0
+
+In practice, ANOVA is robust to violations of the last two assumptions, provided we have a decent sample size (say >30), but we should take a look anyway.
+
+
+```{r}
+autoplot(oysters.lm)
+
+p <- plot(oysters.lm)
+p
+```
+
+***Are there any assumptions that you think might be suspect in this case?***
+Variance is not equal, as seen in residuals vs fitted values. One site is very different that the other two. Probably G site. Yes it is. 
+
+```{r}
+oysters.df$residuals <- residuals(oysters.lm)
+oysters.df$fit <- oysters.lm$fitted.values
+
+oysters.df %>% ggplot(aes(x=fit, y = residuals, col=Site)) + geom_point()
+```
+
+
+### Nonparametric tests and transformations
+
+If our assumption of equal variance is violated, we have a few options. We can try a transformation of our data, or we can fit non-parametric tests which don't make assumptions about the distribution of our data, or a one-way test not assuming equal variances. ***Try one of these approaches.*** 
+
+Suitable transformations might involve log(Oysters)~Site or sqrt(Oysters)~Site, or you could fit the nonparametric kruskal test using kruskal.test(...) or oneway.test(...)
+
+Using your preferred approach, do you reach the same conclusion?
+
+```{r}
+kruskal.test(Oysters~Site,data=oysters.df)
+
+oneway.test(Oysters~Site,data=oysters.df)
+
+# lm(Oysters~Site, data=oysters.df)
+anova(lm(log(Oysters)~Site, data=oysters.df))
+
+anova(lm(sqrt(Oysters)~Site, data=oysters.df))
+
+
+```
+Yes, the results are the same. The differences is still significant and the P value is still small. 
+
+
+### Pairwise tests using Tukey's HSD
+
+When we find a significant result in an ANOVA, it proves that there are differences between at least some of the levels of our categorical variable, but it doesn't actually tell us *which* levels are different to each other. For almost all ANOVAs, this will be the natural follow-up question, so let's take a look using Tukey's HSD which creates confidence intervals for the difference between all pairs of levels of the treatment factor.
+
+
+```{r}
+oysters.tukey <- glht(oysters.lm, linfct = mcp(Site = "Tukey"))
+oysters.tukey 
+```
+
+
+```{r}
+plot(oysters.tukey)
+```
+
+***Based on the 95% confidence intervals, which sites differ significantly from one another, and which do not?***
+Site G differs from the PS sites, which do not differ from each other. 
+
+***Finally, what advice would you give to someone designing an oyster aquaculture operation based on what we have seen in this dataset?***
+Go to Port Simons. You'll get more oysters. 
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/practicals/Oysters-sols.html)

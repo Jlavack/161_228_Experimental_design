@@ -1,0 +1,17 @@
+Run order,A,B,C,D,E,Average percentage complete
+1,Loan,Midwest,Current,Current,Yes,46.5
+2,Lease,Midwest,Current,Current,None,47.2
+3,Loan,Northeast,Current,Current,None,40.5
+4,Lease,Northeast,Current,Current,Yes,49.8
+5,Loan,Midwest,Enhanced,Current,None,60.2
+6,Lease,Midwest,Enhanced,Current,Yes,65.8
+7,Loan,Northeast,Enhanced,Current,Yes,58.5
+8,Lease,Northeast,Enhanced,Current,None,57.2
+9,Loan,Midwest,Current,Enhanced,None,88.7
+10,Lease,Midwest,Current,Enhanced,Yes,81.4
+11,Loan,Northeast,Current,Enhanced,Yes,83.9
+12,Lease,Northeast,Current,Enhanced,None,79.3
+13,Loan,Midwest,Enhanced,Enhanced,Yes,91.6
+14,Lease,Midwest,Enhanced,Enhanced,None,99.3
+15,Loan,Northeast,Enhanced,Enhanced,None,96.3
+16,Lease,Northeast,Enhanced,Enhanced,Yes,94.2

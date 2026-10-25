@@ -1,0 +1,119 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+author: "Staff member responsible for this workshop: Jonathan Godfrey a.j.godfrey@massey.ac.nz"
+date: "last updated 04 March 2025"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+library(emmeans)
+library(nlme)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and images.
+- Before you proceed, test the template works for you, and fix any errors.
+
+
+
+# Practical Exercise: A Split Plot Experiment for Seafood Hygiene 
+
+This exercise is useful for the following courses:
+
+- 161.222;
+- 228.371;
+- and general revision on experimental design topics.
+
+## Aims of this practical exercise
+
+
+In this exercise you will:
+
+- Analyse a simple split plot experiment with only two factors.
+
+## Before you undertake this exercise...
+
+
+## Storage of Seafood
+
+Two types of seafood (mussels and oysters) were put in cool storage at three temperatures (0, 5, and 10 degrees). The response variable eing measured is the natural log of the bacteria count present on each item after two weeks in storage.
+
+The constraint on this experiment was that only nine cool stoarage units were available. Both types of seafood could fit into each unit at the same time though, but rather obviously, each unit can only have one temperature. There are eighteen observations in all.
+
+
+``` {r}
+Seafood = read.csv("Seafood.csv") |>
+mutate(across(c(Unit:Type), as.factor)) |>
+glimpse()
+```
+
+## Required:
+
+Use the `nlme` package to fit the appropriate model for this scenario. To do so means you must identify the random effect.
+
+```{r}
+Seafood.lme1 = lme(lnCount~Type*Temp, random=~1|Unit, Seafood)
+Seafood.lme1 |> anova()
+```
+```{r}
+Seafood.lme2 = lme(lnCount~Type+Temp, random=~1|Unit, Seafood)
+Seafood.lme2 |> anova()
+```
+
+```{r}
+plot(Seafood.lme2)
+```
+
+Interaction term has no positive effect on the model. The model without an interaction term has significant treatment variables. 
+
+
+
+Investigate the residuals for your model. Is there anything to be concerned about?
+No, the residuals seem to have equal variance. 
+
+How will you depict/display the important differences among treatments for this experiment?
+
+
+```{r}
+Seafood.lme2 |> emmeans("Type")
+```
+
+```{r}
+Seafood.lme2 |> emmeans("Temp") |> 
+pairs(adjust = "tukey")  |> confint()
+```
+
+```{r}
+plot(emmeans(Seafood.lme2, ~ Temp + Type), adjust = "tukey")
+
+```
+
+```{r}
+SF_Type <- Seafood %>%
+  group_by(Type, Temp) |>
+  summarise(meanCount =mean(as.integer(lnCount)), .groups = 'drop')
+
+Seafood %>% 
+  ggplot(aes(y = lnCount, x = Temp, col = Type)) + geom_point() +
+  geom_line(data= SF_Type, aes(y=meanCount, x = Temp, group = Type, col = Type))
+
+```
+
+Store seafood of oysters or mussels at lower temperatures. 0 is better than 5. Higher temperatures lead to higher bacteria counts. 
+
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/practicals/Seafood-sols.html)

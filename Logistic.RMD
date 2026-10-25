@@ -1,0 +1,283 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+subtitle: 161.228 Design and Analysis of Experiments 
+author: "Staff member responsible for this workshop: Michelle Marraffini m.marraffini@massey.ac.nz"
+date: "last updated 26 March 2026"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+In this exercise you will:
+
+-   Explore link functions
+-   Gain experience working with multiple predictors for logistic response variables.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+library(tidyverse)
+```
+
+## Before you undertake this exercise...
+
+Download this code template `r xfun::embed_file("Logistic.RMD")` to complete this practical exercise.
+
+
+
+## Link Functions
+
+Consider the data in `r xfun::embed_file("SurfaceToAir.txt")`, which records the velocity of the target and whether the surface to air missile system being tested hit (1) or missed (0). We also looked at this data last week.
+
+```{r}
+Surface <- read.table ("SurfaceToAir.txt", header=TRUE)
+```
+
+1. Fit a binomial model with the probit, cauchit, and complementary log-log functions. Compare these models.
+
+
+::: {#answer}
+
+```{r}
+# your code goes here
+Surface.glm1 <- glm(y ~ TargetSpeed, data=Surface, family=binomial(link=logit))
+Surface.glm2 <- glm(y ~ TargetSpeed, data=Surface, family=binomial(link=probit))
+Surface.glm3 <- glm(y ~ TargetSpeed, data=Surface, family=binomial(link=cauchit))
+Surface.glm4 <- glm(y ~ TargetSpeed, data=Surface, family=binomial(link=cloglog))
+```
+
+```{r}
+summary(Surface.glm1) 
+
+anova(Surface.glm1, Surface.glm2,  test="Chisq")
+```
+:::
+
+2. Generate plots to picture the differences between the fitted models.
+
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+
+:::
+```{r}
+attach(Surface)
+ord <- order(TargetSpeed) #this will get the order of the points 
+plot(TargetSpeed[ord], Surface.glm1$fitted[ord], type='l')
+lines(TargetSpeed[ord], Surface.glm2$fitted[ord], col=2)
+lines(TargetSpeed[ord], Surface.glm3$fitted[ord], col=3)
+lines(TargetSpeed[ord], Surface.glm4$fitted[ord], col=4)
+legend("topright", lty=rep(1,4), col=c(1:4),
+legend=c("logit","probit", "cauchit", "cloglog"))
+```
+
+```{r}
+detach(Surface)
+```
+
+SJplot option
+```{r}
+plot_model(Surface.glm1, type = "pred", terms = "TargetSpeed") + labs(y = "Prob(y)")
+plot_model(Surface.glm2, type = "pred", terms = "TargetSpeed") + labs(y = "Prob(y)")
+plot_model(Surface.glm3, type = "pred", terms = "TargetSpeed") + labs(y = "Prob(y)")
+plot_model(Surface.glm4, type = "pred", terms = "TargetSpeed") + labs(y = "Prob(y)")
+
+```
+
+:::
+
+
+3. Which link function do you think fits best? 
+
+
+::: {#answer}
+Models fit pretty similar except for the cauchit link which seems the worst.
+
+:::
+
+4.  What is the difference in residual deviance between the best and second best model? 
+
+::: {#answer}
+depends on what is picked as best
+
+```{r}
+# your code goes here
+anova(Surface.glm1, Surface.glm2,  test="Chisq")
+```
+
+:::
+
+5. Where are the Cauchy and logit models most different in their predicted values?
+
+::: {#answer}
+
+```{r}
+# your code goes here
+```
+The Cauchy model has very wide predictions across the range. Based on plots generated for question 2, the Cauchy model will have similar predictions as the logit model for the very tails and the center of the Target speeds. Cauchy will differ from logit in the range of about 250-325 and 375-450.
+
+You could make a variable of predictions for each and compare to get more exact numbers.
+:::
+
+
+## Multiple Logistic Regression
+
+## Geese
+The file `r xfun::embed_file("geeseag.txt")`, contains an experiment conducted at an oil drilling station to determine the effect of helicopter flights to service the station on the local geese. Different altitudes and lateral distances from the flock were tried, and whether or not there was a large flight response (1=large response). 
+
+```{r getGeeseData}
+Geese <- read.table ("geeseag.txt", header=TRUE)
+```
+
+1. Fit a logistic regression with altitude, lateral distances, and their interaction predictors.
+
+
+::: {#answer}
+
+```{r}
+# your code goes here
+Geese.glm1 <- glm (formula = cbind(Response, 5 - Response) ~ factor(LAT) *
+factor(ALT), family = "binomial", data = Geese)
+```
+
+:::
+
+2. Compare the full model above with submodels. Are all the terms necessary? How do you know?
+
+::: {#answer}
+
+```{r}
+# your code goes here
+anova(Geese.glm1, test="Chisq")
+```
+If a term is unnecessary, the reduction in residual deviance will be distributed chi-squared with the difference in degrees of freedom. For instance, for the interaction term, the reduction in deviance is 31.187-0 and the degrees of freedom are 27-0. In this case the p-value is 0.26, suggesting that the interaction term is unnecessary.
+:::
+
+3. Examine the residuals for the most appropriate model based on your answer above.
+
+
+::: {#answer}
+
+```{r}
+# your code goes here
+Geese.glm2 <- glm (formula = cbind(Response, 5 - Response) ~ factor(LAT) +
+factor(ALT), family = "binomial", data = Geese)
+par(mfrow=c(2,2))
+plot (Geese.glm2)
+```
+
+:::
+
+4. Consider the additive model.  Are there additional terms you would consider eliminating? Why or why not?
+
+::: {#answer}
+```{r}
+anova(Geese.glm2, test="Chisq")
+```
+
+We could consider removing ALT as it does not appear to add to our model when examining the deviance and p value.
+:::
+
+5. Compare two models where Lateral Distance is the only predictor.  In one case, treat it as a factor, in the other case, treat it as a continuous predictor.  What is the p-value for the test comparing the two models? 
+
+::: {#answer}
+If you changed LAT to a factor in the dataset you will need to change it back for this question.
+```{r}
+# your code goes here
+Geese.glm3 <- glm (formula = cbind(Response, 5 - Response) ~ factor(LAT) , family = "binomial", data = Geese)
+
+Geese.glm4 <- glm (formula = cbind(Response, 5 - Response) ~ LAT , family = "binomial", data = Geese)
+
+anova(Geese.glm3, Geese.glm4, test = "Chisq")
+
+```
+The pvalue for the analysis of deviance is 0.06669 suggesting that the models are not that different. The model with LAT as a continuous variable uses less DF but has higher residual deviance.
+:::
+
+6. Produce the diagnostic plots for the model with lateral distance as a continuous predictor. You should see one point with large cook's distance.  What is the Pearson's residual for this point?
+
+::: {#answer}
+
+```{r}
+# your code goes here
+par(mfrow= c(2,2))
+plot(Geese.glm4)
+```
+
+:::
+
+## Groundwater
+
+Read in the data `r xfun::embed_file("groundwater.csv")`, using:
+
+```{r getGWData, eval=F }
+GroundWater <- read.csv("groundwater.csv", header=TRUE)
+head(GroundWater)
+summary(GroundWater)
+```
+
+ The response is 1 if a detectable level of methyl
+*tert*-butyl ether (a potential contaminant from gasoline) is present, 0 otherwise. The potential
+predictors are well class (public or private), pH, Depth, Disolved Oxygen, Distance from
+the nearest potential source, and Aquifer type (bedrock or unconsolidated). 
+
+1. Use the step function to select a model from these predictors. 
+
+::: {#answer}
+
+```{r}
+# your code goes here
+GroundWater <- GroundWater |> mutate(across(WellClass:Aquifier, factor))
+
+GroundWater <- GroundWater |> mutate(Depth = as.numeric(Depth))
+```
+
+```{r}
+GroundWater_noNAs <- na.omit(GroundWater)
+```
+
+:::
+
+2. What continuous predictor is retained by the step function? 
+
+::: {#answer}
+```{r}
+GroundWater.glm1 <- glm(Response~1,data=GroundWater_noNAs, family="binomial")
+step(GroundWater.glm1, scope=~pH+DissOxy+WellClass+Aquifier+Depth+Distance)
+```
+The AIC score suggests that Response ~ WellClass + pH + Aquifier is the best model.
+
+:::
+
+3. According to the model selected by "step" what are the most favorable levels of WellClass and Aquifer if we want an uncontaminated well?
+
+::: {#answer}
+The model selected by step doesn’t include both. We can look at well class from that model.
+
+```{r}
+# your code goes here
+mod_step <- glm(formula = Response ~ WellClass + Depth + pH, family = "binomial", 
+    data = GroundWater_noNAs)
+plot_model(mod_step, type = "pred", terms = "WellClass")
+```
+Since 1 is contaminated in the data we are modeling the probability of the well being contaminated.
+
+Private wells have a lower probability of being contaminated.
+
+If we wanted to fully answer the question about aquifer and well class we could force both terms to be in the model.
+
+```{r}
+mod <- glm(formula = Response ~ WellClass + pH + Aquifier, family = "binomial", 
+    data = GroundWater_noNAs)
+plot_model(mod, type = "pred", terms = c("WellClass", "Aquifier"))
+
+```
+
+The plot suggests that Private wells have lower probability of being contaminated and unconsolidated Aquifers have lower probability of being contaminated. Private unconsolidated has the lowest mean probability. Caution interpreting Aquifer, it was incredibly unbalanced (see summary(GroundWater_noNAs)).
+:::

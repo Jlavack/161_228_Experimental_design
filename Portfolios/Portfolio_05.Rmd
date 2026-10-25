@@ -1,0 +1,98 @@
+---
+title: "Portfolio_5: Lentil based desert smoothness"
+author: "John Lavack 20001249"
+date: "2026-04-27"
+output: html_document
+---
+
+```{r setup, include=TRUE, warning=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  fig.width = 8,    
+  fig.height = 6, 
+  fig.align = "center",
+  warning = FALSE
+)
+
+library(mixexp)
+library(tidyverse)
+
+data <- read.csv("https://R-Resources.massey.ac.nz/161228/PortfolioTasks/IceCreamMix2649.csv")
+```
+
+```{r}
+data %>% head(10)
+```
+
+
+```{r, warning=FALSE}
+lentil = data %>% rename(X1=stabilizer, X2=fat, X3=cream,  y=smoothness)
+DesignPoints(lentil)
+```
+
+# 1. Fit two models, linear and quadratic
+
+## Linear Model
+```{r}
+mixvars<-c("stabilizer", "fat", "cream")
+Lentil.mix1 <- MixModel(data, "smoothness", mixvars, model=1)
+Lentil.mix1 %>% anova()
+```
+
+
+## Quadratic Model
+```{r}
+Lentil.mix2 <- MixModel(data, "smoothness", mixvars, model=2)
+Lentil.mix2 %>% anova()
+```
+
+
+# 2. Compare the two models
+
+```{r}
+anova(Lentil.mix1, Lentil.mix2)
+```
+
+The second model, with quadratic effects, is the better model. F value of 240.99, $p =  <2.2e-16$
+
+# 3. Graph
+
+The effects plot indicates that smoothness is highest when stablisers (x1) are a small proportion of the mixture, smoothness increases. Cream reaches a maximum around 0 deviations from centroid and fat around 0.3. 
+
+```{r}
+EffPlot(des=lentil, nfac=3, mod=2, dir=1)
+```
+
+In the mixture plot we see that smoothness is higher where 'cream' makes up more of the mixture. With smoothness being better where stabilisters are less of the mix, and fat or cream are in a mixture of around 0.5 each becoming smoother as the proportions tend to >0.5 cream and less <0.5 fat.
+
+
+```{r}
+MixturePlot(x=lentil$X1, y= lentil$X2, z=lentil$X3, w = lentil$y, mod=2, cols=T)
+```
+
+# 4. Results
+
+The model is predicting the best mixture to be where there is no stabiliser, 40% fat and 60% 'cream'. This is consistent with the graphs produced above where more 'cream' resulted in higher smoothness.
+
+```{r}
+# Example logic for a grid search
+grid <- seq(0, 1, by = 0.01)
+space <- expand.grid(stabilizer = grid, fat = grid, cream = grid)
+# Keep only rows that sum to 1
+space <- space[rowSums(space) == 1, ]
+
+# Predict and find the max
+space$Prediction <- predict(Lentil.mix2, newdata = space)
+optimal_mixture <- space[which.max(space$Prediction), ]
+
+optimal_mixture
+```
+
+
+
+
+
+
+
+
+

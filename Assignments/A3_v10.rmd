@@ -1,0 +1,905 @@
+---
+title: "A3_161228_2026_Bugs"
+date: "`r Sys.Date()`"
+name: "John Lavack"
+student_ID: "20001249"
+output:
+  html_document:
+    toc: true
+    toc_float: true  
+    toc_depth: 4   
+    number_sections: false 
+---
+
+```{r attach libraries, warning = FALSE}
+library(readxl)
+library(factoextra)
+library(FactoMineR)
+library(tidyverse)
+library(viridis)
+library(GGally)
+library(patchwork)
+```
+
+# Assignment 3 - Edible Insects
+
+## Info
+
+You are opening a new restaurant that will be serving bug-based food. To design your dishes you ran an experiment to assess consumer preference of 35 different insects. Using CATA (Check All That Apply), you gathered data from 300 people on liking, flavour, taste, texture, and pairing.
+
+The results of this experiment can be found in your individual data set (look for your student ID) in the assignment folder.
+
+In this assignment, you will produce a statistical report on the experiment's findings, and use this to decide what dishes to put on your menu for opening night.
+
+You should:
+
+* Read this entire assignment before starting so that you understand what is required of you.
+* Change the name of the file and the author details above so your work is identifiable.
+* Limit your thinking and working to what is covered within the course material.
+* think about what to show where (excessive or inappropriate plots/text will result in marks being lost).
+* provide justifications (e.g., Why you showed this data on this plot).
+* use non-statistical jargon to describe any plots/outputs that you show (e.g., this shows that spiders are delicious because...).
+* note any insights/anomalies/outstanding questions along the way.
+
+
+**The knitted document should show all code and outputs**.
+
+# Functions & prep
+I used quite a few repeatable functions in order to avoid massive code chunks during EDA and PCA. The code is below. 
+
+```{r read data in}
+# all sheets into a list. I can then call the df directly from the list rather than making extra dfs all over the place
+df_list <- excel_sheets("A3_20001249.xlsx") %>%
+  set_names() %>%
+  map(read_excel, path = "A3_20001249.xlsx")
+
+liking <- unlist(df_list$Liking[2])
+```
+
+
+```{r long format df}
+#making a long format dataframe for EDA with liking. This way things are going to be more simple to work with
+EDA_df <- cbind(df_list$Flavour) %>% pivot_longer(cols = -1, values_to = 'Score', names_to = 'Characteristic') %>% mutate(Measure = 'Flavour') %>%
+  rbind(
+    cbind(df_list$Taste) %>% pivot_longer(cols = -1, values_to = 'Score', names_to = 'Characteristic') %>% mutate(Measure = 'Taste') 
+  ) %>%
+  rbind(
+    cbind(df_list$Texture) %>% pivot_longer(cols = -1, values_to = 'Score', names_to = 'Characteristic') %>% mutate(Measure = 'Texture') 
+    ) %>%
+  rbind(
+    cbind(df_list$Pairing) %>% pivot_longer(cols = -1, values_to = 'Score', names_to = 'Characteristic') %>% mutate(Measure = 'Pairing') 
+    ) %>%
+  left_join(df_list$Liking, by = 'insect') %>%
+  #adding in some extra columns for EDA
+  group_by(Characteristic) %>%
+  mutate(Score_diff_from_mean = Score - mean(Score), mean_score = mean(Score)) %>% ungroup()
+```
+
+```{r flavour summary table and corrplot function, warning=FALSE}
+summary_eda <- function(df, eda_data, measure) {
+  table <- broom::tidy(df_list[[measure]][-1]) %>% rename(Characteristic = column)
+  #I am going to do some code you probably won't like, because I am nesting base R indexing within functions. I am doing this to avoid flooding the namespace with unnecessary objects out of the EDA. 
+  cor <- GGally::ggcorr(
+    data = cor(cbind(df_list$Liking[-1], df_list[[measure]][-1])),
+    label = TRUE,          
+    palette = "RdYlBu",     
+    geom = "tile",      
+    hjust = 0.8,            
+    size = 4,              
+    layout.exp = 1         
+  ) + labs(title = paste(measure, 'Correlation Plot')) + theme(plot.title = element_text(size = 20, face = "bold", hjust = 0.5))
+  
+  #density plot steps
+  #1 get a custom label containing the mean and sd, and median. 
+  label_data <- paste(table[['Characteristic']],"; ", sprintf("Mean: %.2f\nSD: %.2f\nMedian %.2f", table[['mean']], table[['sd']], table[['median']]))
+
+  # 2. Convert to a named vector 
+  facet_labels <- setNames(label_data, table[['Characteristic']])
+  
+  #3. make the graph
+  density <- eda_data %>%
+    filter(Measure == measure) %>%
+    ggplot() +
+    geom_density(aes(x = Score, group = Characteristic, fill = Characteristic), alpha = 0.6) +
+    geom_vline(data = table, aes(xintercept = mean, group = Characteristic), col = 'red') + #mean
+    geom_vline(data = table, aes(xintercept = mean + sd, group = Characteristic), col = 'red', linetype = 'dashed' ) + #+1 sd
+    geom_vline(data = table, aes(xintercept = mean - sd, group = Characteristic), col = 'red', linetype = 'dashed') + #-1 sd
+    geom_vline(data = table, aes(xintercept = median, group = Characteristic), col = 'black') + #median
+    facet_wrap(~Characteristic, labeller = as_labeller(facet_labels)) +
+    theme_minimal() +
+    theme(
+      legend.position = 'none',
+      strip.text = element_text(size = 8)
+    ) +
+    labs(title = paste(measure, 'Score Distribution by Characteristic'),
+    subtitle = 'solid red line = mean, dotted red = standard deviations, solid black = median') # I can't be bothered to make a custom object for the legend. Maybe I will come back and do this if I have the time. 
+  
+  return( list(
+    table = table %>% knitr::kable(),
+    corplot = cor,
+    density_plot = density,
+    plot = (cor | density) #one to visualise
+  ))
+}
+```
+
+
+```{r EDA function, fig.width=15, fig.height=15}
+eda_plots <- function(df, measure) {
+  #----- Top layer------
+  #column plot showing how many times a characteristic was the highest scored for an animal
+  col_plot <- df %>% filter(Measure == measure) %>%
+    group_by(insect) %>%                
+    slice_max(order_by = Score, n = 1, with_ties = FALSE) %>% # Pick top score per group
+    ungroup() %>%
+    count(Characteristic, sort = TRUE) %>%
+    ggplot(aes(y = Characteristic, x = n) ) + geom_col() +
+    labs(title = paste('Top Scoring', measure, 'by Insect')) +
+    theme_minimal()
+  
+  # see total score of characteristics for insects
+  total_char <- df %>% filter(Measure == measure) %>%
+    group_by(Characteristic) %>%
+    summarise(total = sum(Score), liking = mean(liking), .groups = 'drop') %>% arrange(desc(total)) %>%
+    ggplot(aes(x=total, y = Characteristic, color = total)) + 
+    geom_point(size = 2) + 
+    geom_segment(aes(xend=0), linewidth = 1) +
+    theme_minimal() +
+    labs(title = 'Total Scores by Characteristic', y = '') +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), legend.position='none',  axis.text.y = element_blank())
+  
+  #---- bottom layer------
+  #see which insect has the highest difference in overall score mean
+  total_insects <- df %>% filter(Measure == measure) %>% 
+    group_by(insect) %>%
+    summarise(diff = mean(Score_diff_from_mean), .groups = 'drop') %>%
+    mutate(insect = factor(insect, levels = unique(insect[order(diff, decreasing = FALSE)]))) %>%
+    ggplot(aes(x=diff, y = insect, color = diff)) + 
+    geom_point() + 
+    geom_segment(aes(xend=0)) +
+    geom_vline(xintercept = 0, col = 'black', linetype = "dashed") + 
+    scale_color_viridis_c(option = "inferno", direction = -1) + 
+    theme_minimal() +
+    labs(title = 'Insect Total Scores differnce from mean score', color = 'total difference', y = "") +
+    theme(legend.position = 'bottom')
+  
+  #heatmap showing the worksheet by insect with likness score on right y axis. 
+  heatmap <- df %>% filter(Measure == measure) %>% mutate(insect = factor(insect, levels = unique(insect[order(Score, decreasing = FALSE)]))) %>%
+    ggplot(aes(x = Characteristic, y = insect, fill = Score)) +
+      geom_tile(color = "white", linewidth = 0.5) + 
+      scale_fill_viridis_c(option = "inferno", direction = -1) + 
+      theme_minimal() +
+      theme(
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), 
+        panel.grid = element_blank()
+       ) +
+      labs(fill = "Score", title = paste("Insect", measure, "Scores"), x = "", y = "") +
+      coord_cartesian(clip = "off") +
+      theme(plot.margin = margin(5.5, 40, 5.5, 5.5), legend.position = 'bottom') 
+  
+  (col_plot | total_char) / (heatmap | total_insects) + 
+    plot_annotation(title = paste("Insect", measure, "EDA"),
+                    theme = theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+                    )
+}
+
+```
+
+```{r PCA analysis function}
+pca_analysis <- function(data, y, n_plots, n_rotations, measure) { #got to pass in the dataframe with insects dropped; df_list[['sheet']][-1], and y = unlist(df_list$Liking[2])  ## if time, come back and enhance this to calculate the PC cumsum cut off automatically, format the biplot output nicer and 
+  #1. do the PCA
+  pca <- prcomp(data)
+  
+  #2. Scree plot. This is how I get n_plots and n_rotations. I ran this many times. Rule of thumb I used was cumulative variation of 0.85%, take that number of PCs
+  table1 <- broom::tidy(pca, matrix = "pcs") %>%
+    mutate(cumulative = cumsum(percent))  %>% 
+    knitr::kable()
+  
+  scree_plot <- fviz_screeplot(pca)
+  
+  #3 loop to get the bi-plots. I pretty much only show three each time though. It is too much to show many more and explain each one. 
+  combos <- combn(1:n_plots, 2)
+  
+  bi_plot_list <- list()
+  
+  for (i in 1:ncol(combos)) {
+    x_axes = combos[1, i]
+    y_axes =  combos[2, i]
+    plot_name <- paste0("bi_plot_", i)
+    
+    bi_plot <- fviz_pca_biplot(pca, 
+                repel = TRUE, 
+                axes = c(x_axes, y_axes), 
+                col.ind = y, 
+                gradient.cols = c("#9F2F7FFF", "#FDE725FF", "#94D840FF"),
+                title = paste("PCA Biplot PCs", x_axes, "and", y_axes)) + 
+      coord_equal()
+    
+    bi_plot_list[[plot_name]] <- bi_plot
+  }
+  
+  #4 another loop to get the rotation table. I am going to do it a bit strange. I want a table with PCs along the top, and each value is a tibble of characteristics and value. This way I can see each PC's rotation comparatively. 
+  #I make the whole table, then just filter it to get the PCs I want. THen I pivot it and put the values into a comma separated value pairing, like a tibble (but not a tibble, but like a flattened tibble). 
+  pca_rotations <- broom::tidy(pca, matrix = "rotation") %>%
+    filter(PC %in% 1:n_rotations)
+  #show the table
+  rotation_table <- pca_rotations %>% 
+    arrange(PC, desc(value)) %>%
+    group_by(PC) %>%
+    mutate(rank = row_number()) %>%
+    ungroup() %>%
+    mutate(Loading = paste0(column,', ', round(value,2))) %>%
+    select(PC, rank, Loading) %>% 
+    pivot_wider(
+      names_from = PC, 
+      values_from = Loading,
+      names_prefix = "PC"
+    ) %>% select(-rank) %>%
+    knitr::kable()
+  
+   #5 show the loadings as a graph, from my portfolio 10:
+  load_plot <- pca_rotations %>% 
+    ggplot(aes(x=column, y = value, ymin = 0, ymax = value, col = as.factor(PC), group = as.factor(PC))) +
+    geom_linerange(position = position_dodge(width = 0.5)) +
+    geom_point(position = position_dodge(width = 0.5)) +
+    theme_minimal() +
+    labs(color= 'PC',
+         title = 'PC loadings',
+         x ='') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  
+  #6 assemble the plot
+  
+  final_plot <- (
+    scree_plot /  
+    ((bi_plot_list$bi_plot_1 | bi_plot_list$bi_plot_2 | bi_plot_list$bi_plot_3) + plot_layout(guides = "collect")) /
+    load_plot + 
+    plot_annotation(
+      title = paste("Insect", measure, "PCA Analysis"),
+      theme = theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+    ) +
+    plot_layout(
+      heights = c(1, 2, 1))
+  )
+  #store this all as an object to help call parts individually... otherwise I can't see the whole plot in markdown and have to knit each time. Nobody has time for that. 
+  return(list(
+    variance_table = table1, 
+    rotation_table = rotation_table,
+    plot = final_plot, 
+    pca_object = pca, 
+    bi_plots = bi_plot_list)
+  )
+}
+```
+
+## Your answers below here
+
+The resulting data can be read in with the following command (you need to change the file name to match that of your data).
+
+Note also that you will need to read in all five sheets (I recommend revisiting at the Plant Based Meat Alternatives lectures and lab if you get stuck), I have provided the code for the first two below:
+
+
+
+### Q1 - Exploratory Data Analysis (15 marks)
+*Explore the three data sets of texture, taste, and flavour individually.* 
+
+*Produce plots/summary statistics to support your exploration, and describe any key observations from each*
+
+EDA will proceed in two phases. Phase one will look at summary statistics and correlation between the characteristics and liking. This will help with PCA and modelling later on. PCA makes linear combinations of variables which aim to maximise variance. This is directly determined by correlation (highly correlated variables will have similar loadings, and be redundant, allowing for dimensionality reduction... kind of like alias patterns). I also show density plots so I can visually see the shape of the data explained in the summary table.
+
+<br>
+
+Phase 2 is a standard look over the data using four visualisations. The first is a count of the times each characteristic had the highest score for an insect/bug. This shows which characteristics are most prevalent most often. Then I show the total score of each characteristic, to show which one was most commonly experienced - higher scores mean more often occurring. Followed by a heat map to see a buy insect profile. Then a total score difference from the mean to see which insects are above and below the middle in terms of total score. EDA will be brief. All code is in two functions, summary_eda() and eda_plots().
+
+#### Q1A - Insect Flavour 
+
+In general, most flavours have a flat or roughly normal distribution. 
+
+- Except for mouldy, which has a positive kurtosis of 8 and a negative (left skew). 
+- Pungent, straw and vanilla are skewed, albeit far less. As can be seen in the plot and table below. 
+- The highest average scored flavours were pungent, mouldy and straw (213, 212, 207), with the lowest being vanilla, dehydrated fruit and seaweed (115, 117, 123). 
+- In general, standard deviations tend to be wide, indicating wide variance in the dataset. 
+- People didn't always taste the same flavours (mostly aromas) as each other.  
+<br>
+
+- Worth noting is that there are patches of highly correlated variables, but generally no strong correlations. Which will probably mean lots of primary components.  
+- Freshness is perfectly correlated with liking. 
+- Seaweed and mouldy are also highly correlated with liking (0.8, 0.9). Unsurprisingly, these two flavours have the same correlation with freshness as liking. As do all other flavours. 
+- Freshness is a perfect proxy for liking in this dataset. People like the bugs if they are fresh. 
+<br>
+
+
+```{r flavour EDA summary table, warning=FALSE}
+#this output needs to be in a list, so that I can call the table individually
+flavour_eda <- summary_eda(df_list, EDA_df, 'Flavour')
+
+flavour_eda$table
+```
+
+```{r flavour EDA summary plot,warning=FALSE, fig.width= 15, fig.height=8}
+flavour_eda$plot
+```
+
+
+- Pungent was the flavour that was most commonly highly scored characteristic amongst all insects, 8 times. 
+- It was also one of three highest total scores across all insects along with mouldy and straw. 
+- Indicating lots of insects were either mouldy or pungent or both.
+<br>
+
+- Freshness was the second highest scoring flavour, 5 times.
+- Total freshness score across all insects is about 5000. Roughly average. 
+- Freshness is important for liking. 
+- Straw, pungent, fish and mouldy are very common (highest total scores) and except mouldy, are not good for liking. Indicating that perhaps most bugs' flavour profiles are off putting.  
+<br>
+
+- Fresh insects are not necessarily more flavoursome than average (high total flavour score). 
+- Most flavoursome is the bee, with a flavour profile of pungent, straw, mouldy, tea and seeds. Not what one would associate with liking based on the correlation plot. 
+- Looking at the patterns overall, I think that this scale is somewhat compromised. Flavour is highly subjective and mostly aromatic (as opposed to tastes which are more biological). 
+
+<br> 
+
+We see lots of mouldy, mushroom, pungent, straw and tea flavours... often flavours associated with mushrooms in general. And grilled, which is a flavour caused by the Maillard reaction which requires heat. Drying does produce this reaction, albeit less so than cooking, and according to the study, insects were dried. Drying changes flavour profiles of ingredients. Any dried food will be more pungent, mouldy, tea like and straw like and less less 'fresh'. 
+
+<br>
+
+When I look at the heat map and data that is what I see. Confusion in flavours, as if the tasters are having difficulty describing the flavour. 
+
+
+```{r flavour eda, fig.width=15, fig.height=15}
+eda_plots(EDA_df, 'Flavour')
+```
+
+
+
+
+#### Q1B - Insect Texture
+
+Texture is far simpler to analyse.
+
+- Oily is the highest scoring texture with mean of 285. 
+- Lowest is hard with 14. 
+- Standard deviations are again wide.  
+- Hard and oily have high kurtosis and big skews. 32 an 5 for hard, 31 and -5 for oily. 
+
+<br>
+
+- Crunchiness is 100% positively correlated with liking. 
+- Hard texture is strongly negatively correlated with other textures hard being hard like a rock, not crunchy hard.It is the only texture negatively correlated with liking. 
+- Sticky, crunchy, oily and soft are all positively correlated to some degree. Note: these are unavoidable and caused by the drying process. 
+
+
+```{r texture EDA summary table, warning=FALSE}
+#this output needs to be in a list, so that I can call the table individually
+texture_eda <- summary_eda(df_list, EDA_df, 'Texture')
+
+texture_eda$table
+```
+
+```{r texture EDA summary plot,warning=FALSE, fig.width= 15, fig.height=8}
+texture_eda$plot
+```
+
+- Oily is the most often highest occurring score for texture. It also has the highest score by a large margin. 
+- Followed by crunchy. 
+- Hard has the least.  
+
+<br>
+
+- The heat map shows that most insects were oily.
+- Crunch and soft are not mutually exclusive, but soft if not very common.
+- The most textural insects were the big butted ant, lemon ant, termite and morio worm. 
+- Least were the tarantula, cricket and bee.  
+
+Looking at this with a chef's eye (I was a chef for a long time), this is not at all surprising. The dehydration process applied must not be a complete dehydration. Oiliness is expected if ingredients are only partially dehydrated because the internal oils are squeezed out. In some cases this oily residue is sticky, being a mix of natural sugars and proteins. Texture is not really subjective. There are far fewer ways it can vary person to person, and variance is internal to the person (If I eat more crunchy food, I will expect things to be crunchier and rate food as less crunchy, but still crunchy). 
+
+<br>
+
+In general, crunch is common and liked. 
+
+```{r texture eda, fig.width=15, fig.height=15}
+eda_plots(EDA_df, 'Texture')
+```
+
+
+
+
+#### Q1C - Insect Taste 
+
+Finally taste. 
+
+- The taste characteristics are much closer in means than flavour or texture, ranging from 122 (salty) to 190 (sour). 
+- Standard deviations are still wide. Though narrowest of the lot. 
+- Each distribution is very different. Except for bitter and umami, the tastes have a peaked distribution, indicating clusters of tastes by insects, perhaps. 
+- Umami is 100% positively correlated with liking. 
+- Bitterness 100% negatively correlated. 
+- Sweet and salty are positively correlated with liking. 
+- Sourness negatively. 
+
+This makes sense. Bitter and sourness are indicators of poison or spoiled food. Humans don't like them. 
+
+
+
+```{r taste EDA summary table, warning=FALSE}
+#this output needs to be in a list, so that I can call the table individually
+taste_eda <- summary_eda(df_list, EDA_df, 'Taste')
+
+taste_eda$table
+```
+
+```{r taste EDA summary plot,warning=FALSE, fig.width= 15, fig.height=8}
+taste_eda$plot
+```
+
+- Most bugs were either sour or bitter. These were the top two highest ranked tastes - 
+- These also had the highest total scores. The other tastes were about even.
+- The heat map shows that umami, sweetness and saltiness were not often big scoring tastes. 
+- The most 'tasty' insects with the highest taste score differences from the average were the lemon ant, waxworm and mealworm.
+
+In general, what I see is that most insects were not appetising, and it is likely that those which are, had lower scores in sour and bitterness - perhaps more akin to lemon sour or coffee bitter as opposed to spoilt fruit sour and poison bitter.
+
+
+```{r taste eda, fig.width=15, fig.height=15}
+eda_plots(EDA_df, 'Taste')
+```
+
+
+
+### Q2 - Principal Component Analysis (15 marks)
+
+*Present the experiment's data using PCA - produce appropriate plots and text to describe the relationship between the different insects and Flavour, Texture, and Taste variables individually.*
+```{r pca analyses}
+Flavour_pca <- pca_analysis((df_list[['Flavour']][-1]), unlist(df_list$Liking[2]), 3, 7, 'Flavour')
+Taste_pca <- pca_analysis((df_list[['Taste']][-1]), unlist(df_list$Liking[2]), 3, 5, 'Taste')
+Texture_pca <- pca_analysis((df_list[['Texture']][-1]), unlist(df_list$Liking[2]), 3, 5, 'Texture')
+```
+
+
+#### Q2A - Insect Flavour 
+
+For flavour, 
+
+- Seven or eight PCs are required to explain this dimension of bug characteristics. 
+- There is no obvious elbow in the scree plot, so instead we choose by cumulative variability explained. 
+- This is in part explainable by the unclear correlation patterns seen during exploratory data analysis. 
+- When looking at the first three PCs, we can see that only flavours positively correlated with liking, which is the same as being correlated with freshness, (mouldy, seaweed and fresh) or with 0 correlation (seeds) are in the positive direction of dimension 1. 
+- In the negative direction of dimension 1 are variables positively correlated with pungent; fish, dehydrated fruit, tea and mushrooms (both 0 correlation with pungent). 
+- In the negative dimension 2 direction are flavours negatively correlated with freshness such as olives, grilled, fish and vanilla. 
+- Vanilla is the biggest.  
+- PC1 which explains 23% of the variation seems to be the component around freshness. 
+- 0,6 of the loading is on freshness, then mouldy, seaweed, mushroom and sees. 
+- All associated positively or 0 with liking/freshness. Which explains why pungent is -0.5 for this PC.  
+
+- PC 2 is highly vanilla loaded at 0.63. 
+- PC 3 is very similar to PC 2, flavours not correlated with freshness, those correlated with pungency are positively loaded.
+- When we look at PC2 vs PC3 the plot looks confused with no clear pattern and fresh is in the exact centre. This makes sense if PCs 2 and 3 are very similar.  
+- Further analysis of the loadings show that they are typically loaded towards one or a pair of variables. And PCs 4 onwards are difficult to interpret.
+
+<br>
+
+```{r flavour pca variance}
+Flavour_pca$variance_table
+```
+
+```{r flavour pca plot, fig.height=15, fig.width=15}
+Flavour_pca$plot
+```
+
+```{r flavour pca rotations}
+Flavour_pca$rotation_table
+```
+
+
+
+
+#### Q2B - Insect Texture
+
+- With the texture PCA there is a clear elbow at PC2 or PC3. These cover a decent amount of variation in the data (85% with 3 PCs). 
+
+- The first PC is all about crunchy and not hard correlations/combinations. 
+- Crunchy is 0.72 and hardness is -0.17. 
+- Crunchy is perfectly correlated with liking, and positively correlated with oily, sticky and soft. 
+- All these are positively loaded in the first PC. 
+
+- PC2 is the sticky (0.37) not soft (-0.88) axis. 
+- Hard and oily are in the negative direction. 
+
+- PC3 seems to be a negative PC based around hardness (-0.79) and oiliness (-0.6). All insects are oily, so it is therefore easir to think about as the 'hardness' PC.
+- Soft, oily, hard and crunchy are all in the negative direction. Only sticky has a positive loading of 0.06.
+
+
+```{r texture pca variance}
+Texture_pca$variance_table
+```
+
+```{r texture pca plot, fig.height=15, fig.width=15}
+Texture_pca$plot
+```
+
+```{r texture pca rotations}
+Texture_pca$rotation_table
+```
+
+
+#### Q2C - Insect Taste 
+
+- The scree plot has an obvious elbow at two and the two PC make up 80% of the variance in the data. 
+- PC1 has low liking in the positive direction. It is loaded 0.6 and 0.4 on bitter and sour respectively. All tastes correlated with liking are in the negative direction. 
+- This PC is the PC of biologically disliked tastes vs biologically liked ones. A very clear PC that fits with established taste theory.  
+
+- PC2 is the PC of saltiness (0.6), not sweet (0.67), (nor sour, -0.4). 
+- A neat salt vs sweet divide that fits with the antagonism between salt and sweet in food. 
+
+- PC3, though not needed, continues the pattern of being highly loaded on one taste, sour (0.8) and highly negatively loaded on another, sweet (-0.4). It also has bitter at -0.3.
+- PC3 is the sour PC. 
+
+<br>
+
+```{r taste pca variance}
+Taste_pca$variance_table
+```
+
+```{r taste pca plot, fig.height=15, fig.width=15}
+Taste_pca$plot
+```
+
+```{r taste pca rotations}
+Taste_pca$rotation_table
+```
+
+
+
+### Q3 - Insect Liking (10 marks)
+
+*Present the insect liking data on a suitable plot/table. Use this, and your work above, to explain which three insects were liked the most and why you think this is.*
+
+I will repeat the heat map and lollipop chart, but this time I will show the liking score and order insects by liking. These are seen on the right of the heat map, and act as a y axis for the lollipop chart.  
+The three most liked insects were:
+1. Lemon ant with 98/100 <br>
+2. Morio worm with 95/100 <br>
+3. Termite with 89/100. <br>
+
+<br>
+
+Lemon ants have high positive taste attributes of umami and sweet. Middling saltiness. Low bitterness, but high sourness. Here, it is likely that the sourness is more 'lemon'/tangy sour than spoilt fruit sour because the lemon ant is also high in freshness. Taste clearly dominates flavour because the lemon ant is pungent and fishy which are known to be negatively associated with liking. However, these flavour characteristics are highly likely a by product of the drying process. Lemon ants are crunchy and not hard. The two most important textures and in the right configuration to be liked. 
+
+<br>
+
+Morio worms are very similar to lemon ants, but not sour, nor pungent. They are mildly salty, have elements of fresh (strongly) straw, vanilla and mould. Straw. Again, taste overcomes flavour for liking. Texture-wise the morio worm is crunchy, not hard. It seems like an overall inoffensive bug to eat.   
+
+<br>
+
+Termites are slightly bitter, perhaps coffee bitter, more salty (PC2 was loaded this way), not sweet, but high in umami. It's texture is crunchy, not hard. Flavour is pungent, vanilla, drilled, mouldy, olives and seaweed. Seaweed and mould doing the heavy lifting for flavour. However, as has been seen, flavour is not as impact-full as taste for liking. 
+
+<br>
+
+In addition to these characteristics, these insects and beetle grub are inoffensive to eat. Small and less mentally difficult to overcome than a cicada or tarantula. Which I think matters a lot. Added to this, they are small by comparison to other insects. Dried bugs are not nice to eat unprepared. Their hemolymph dries out and their innards become powdery. Larger ones have this more than smaller ones. The insides are at best un-tasty, at worst bad. So more volume of that means less good taste. Small insects are simply just more palatable because their surface area is larger compared to their insides. Flavour/taste for insects is on their outsides, caused largely by their pheromones. So you want smaller ones that take advantage of the square cube law. This is why the first really bad tasting insect is more than halfway down the list - the centipede - is also the first big one. Excepting the witchetty grub, the exception that proves the rule. These have lots and lots of buttery hemolypmh which just turns oily when dried. Aside from its oily and straw characteristics, the witchetty grub is pretty much a neutral bug. 
+
+<br>
+
+(I have eaten and cooked insects at a restaurant I worked at before. I am drawing on my experience there and what we learned experimenting with them).
+
+```{r heat map of all data, fig.width=20, fig.height=10}
+total_insects <- EDA_df %>%mutate(insect = factor(insect, levels = unique(insect[order(liking, decreasing = FALSE)]))) %>%
+    group_by(insect) %>%
+    summarise(total = sum(Score), liking = mean(liking), .groups = 'drop') %>% arrange(desc(total)) %>%
+    ggplot(aes(x=liking, y = insect, color = liking)) + 
+    geom_point(size = 5) + 
+    geom_segment(aes(xend=0), linewidth = 2) +
+    scale_color_viridis_c(option = "inferno", direction = -1) + 
+    theme_minimal() +
+    labs(title = 'Insect Total Scores vs Insect Liking', color = 'Liking', y = "") +
+    theme(legend.position = 'bottom', axis.text.y = element_blank(), plot.margin = margin(0, 0, 0, 0))
+  
+heat_map <- EDA_df %>% mutate(insect = factor(insect, levels = unique(insect[order(liking, decreasing = FALSE)]))) %>%
+  group_by(Measure) %>%
+    ggplot(aes(x = Characteristic, y = insect, fill = Score)) +
+      geom_tile(color = "white", linewidth = 0.5) + 
+      scale_fill_viridis_c(option = "inferno", direction = -1) + 
+      theme_minimal() +
+      theme(
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), 
+        panel.grid = element_blank()
+       ) +
+      labs(fill = "Score", title = 'Insect characteristics', x = "", y = "") +
+      # Add Likeness Score as text on the right side
+      geom_text(aes(label = round(liking, 0)),
+                x = Inf, hjust = -0.5, size = 3, color = "black") +
+      coord_cartesian(clip = "off") +
+      theme(plot.margin = margin(5.5, 40, 5.5, 5.5), legend.position = 'bottom') 
+
+(heat_map | total_insects) + 
+    plot_annotation(title = 'Lemon ants are the most liked insect to eat',
+                    theme = theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold")))
+```
+
+
+### Q4 - Insect Pairing (10 marks)
+
+*Present the experiment's pairing data using PCA. Produce appropriate plots and text to describe the relationship between the different insects and what they are paired with.*
+
+Pairing is much like the flavour PCA. We need lots of PCs to describe it. About 9 or so.
+
+- The first PC is all about whether one would eat the insect alone (0.5) or not at all (-0.5).
+- PC2 seems to be around eating them with savoury food like meat (0.57 and rice (0.22) or sweet dairy products; jam (-0.4), desserts (-0.3), bakery products (-0.2).
+- PC3 seems to be vegetable related (0.43) and savoury snacks (0.42) vs meat (-0.35) and sweets (-0.25), jam (-0.42). A somewhat odd and hard to explain PC. 
+- PC4 seems to be around carbohydrate pairings. Bakery (0.55), potatoes (0.53), savoury snacks (0.34) vs pasta (-0.26). 
+- PC5 is maybe animal protein like meat (0.49) and fish (0.52) vs rice (-0.29), but jam is up there at 0.31. So this PC is beginning to get insensible. 
+- Further PCs descend into this same difficult to interpret area. 
+
+
+```{r pairing pca}
+Pairing_pca <- pca_analysis(df_list[['Pairing']][-1], unlist(df_list$Liking[2]), 3, 9, 'Pairing')
+```
+
+```{r pairing varinace plot}
+Pairing_pca$variance_table
+```
+
+```{r paring pca plot, fig.height=15, fig.width=15}
+Pairing_pca$plot
+```
+
+```{r pairing pca rotations}
+Pairing_pca$rotation_table
+```
+
+<br>  
+
+- Looking at a pairing heat map for each insect, we can see that spices is a highly rated pairing. Indicating a liking when the original taste/flavour is hidden. Spices were used to hide bad tastes initially, before their use in a culinary sense was developed. 
+- Cheese, fish, bakery and potatoes are also quite high. 
+- As liking increases, would eat it alone also increases. The reverse is true for the would not eat it option. 
+
+<br> 
+
+Focusing on the top three by way of example, 
+
+- Lemon ants are most liked paired with cheese, desserts and jam. They area paired in ways that one would typically use a fruit, to cut the richness of cheese or to enjoy the sweetness of the fruit. 
+
+- The morio worm (grub) is highly liked paired with fruit, jam and meat. Followed by desserts and potato. Morio worms are fresh and vanilla in flavour, with umami, sweetness and stickiness with crunch for good measure. They are paired like a dessert seasoning. 
+
+- Termites, which are more savoury and a tad bitter, pair well with paste, rice, savoury snacks and spices, but are also liked alone. They have an odd flavour profile, but decent taste elements. They are paired like a bar snack.
+
+
+
+
+```{r pairing analysis, fig.width=10, fig.height=10}
+  
+EDA_df %>% filter(Measure == 'Pairing') %>% mutate(insect = factor(insect, levels = unique(insect[order(liking, decreasing = FALSE)]))) %>%
+  group_by(Measure) %>%
+  ggplot(aes(x = Characteristic, y = insect, fill = Score)) +
+  geom_tile(color = "white", linewidth = 0.5) + 
+  scale_fill_viridis_c(option = "inferno", direction = -1) + 
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), 
+    panel.grid = element_blank()
+   ) +
+  geom_text(aes(label = round(liking, 0)),
+            x = Inf, hjust = -0.5, size = 3, color = "black") +
+  coord_cartesian(clip = "off") +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5), legend.position = 'bottom') +
+  labs(title = 'Insect pairing heat map')
+
+```
+
+
+
+### Q5 - Statistical models (25 marks)
+
+#### Q5a - Flavour, Taste, or Texture?
+
+*Discuss which of the three characteristics (Flavour, Taste, or Texture), if any, you now consider the most important. In your answer, consider your findings from your previous analyses as well as any other contextual (or otherwise) information.*  
+  
+Taste, hands down. 
+Taste is the biggest element to the success of a dish. As an ex-chef I know this very well. Aromas can be masked or changed by cooking. Texture can be likewise controlled to some extent. If worst comes to worst, puree it and go from there. Taste, also changeable, but less so, is the most important thing. 
+
+<br>
+
+Looking at the prior analysis I consistently saw that liking was higher when umami, sweet and salty were high. Bitter and sour insects were lowest in liking.  
+Other characteristics help, but these are the most important. Taste was the clearest PCA, flavour the most confused. Texture mattered more than flavour, but less than taste. I know this because:
+
+- Almost all the bugs had high pungent and/or straw and/or fish flavours, even the top liked insects like the lemon ant. 
+- Yet, liking was still high in some bugs. 
+- That is because texture and taste matter more than flavour.
+- I know taste is more important than texture because the only texture that is bad for liking is hard, and few insects were hard. 
+- All were oily, most were at least above 150 in crunchy, soft and sticky.
+- This means, that if most had negative flavour characteristics and positive texture characteristics, yet still scored between 25 and 75 in liking, then something else must be accounting for that variation in liking. 
+- Taste is the only remaining option.
+
+<br>
+
+#### Q5b - Multiple Regression
+
+*Using only one of these (Flavour, Taste, or Texture), and liking information, perform multiple regression with liking as the response variable (you can assume this is a continuous variable here), describe any choices and checks you make along the way.*
+
+- First I fit two models, a full interaction model and a simple linear model.
+- An anova test between the two models shows that the more complex model does not perform better than the simpler one. 
+- The null hypothesis has failed to be rejected. P value of 0.16.
+- Therefore, the linear model is chosen.
+
+<br>
+
+- In neither model am I using any transformations. 
+- The predictor variable data range between 1 to 300 on the same rate all that apply scale. 
+- Liking, the dependent variable, is on a scale 1 to 100. 
+- All variables are on the same units - 1 represents 1 in either scale. 
+- I could normalise all data to a standard 1-100 scale, but I don't think it will matter so I haven't.
+- Nor have I looked at removing outliers, as the range is bounded and I think low or high points would provide useful variation in the model.
+
+<br>
+
+```{r model}
+model_data <- df_list$Taste %>% cbind(liking)
+
+model1 <- lm(liking ~ bitter+salty+sour+sweet+umami, data = model_data)
+model2 <- lm(liking ~ bitter*salty*sour*sweet*umami, data = model_data)
+```
+
+```{r anova between two models}
+broom::tidy(anova(model1, model2))
+
+```
+
+
+Next I will inspect the summary output of the model. I will not do an ANOVA test because I am not checking if group means are equal amongst factors, there are none in this data.   
+
+<br> 
+
+- The summary shows that only umami and salty are significant for a positive liking score. 
+- P values of 6.44e-01 and 0.00306 respectively. 
+- Umami has the biggest impact with a coefficient of 0.25. 
+- Salt has the next at 0.8. 
+- Sour and sweet are not significant at p = 0.05, but are for p = 0.1. 
+- Bitter is not a useful predictor.  
+- Sour and bitter are the only two which negatively impact liking. -0.03 each.   
+- The adjusted R-squared is 0.9449. Roughly 0.95. So 95% of the variability in the data are described by this model. 
+- This high R squared score implies that the extra variables are not penalising the model much.
+- I will keep all five in, even the non-significant ones.
+- Taste is a well known concept, so having all five in helps with a descriptive model. It is enough to know that umami and sweetness are the major players in liking an insect or not.  
+
+<br>
+
+- The residual standard error is low for the data where liking goes up to 100. 
+- The average distance from the fitted line is 6.7. 
+- While standard error is low for each of the predictors, but not the intercept. 
+- Indicating that the model is not certain at predicting liking when all taste values are at 0. Which makes sense, because few such ingredients anywhere exists. Zero would be highly rare value across all tastes. Even water has a taste unless it has been filtered.
+
+<br>
+
+- Overall the model is a good one, with a model p value < 2.2e-16 and a significant F score of 117.5 on 5 and 29 degrees of freedom. 
+- There are enough free points that the model is not pinned down by predictors. 
+- I will continue with this model.
+
+<br>
+
+```{r}
+summary(model1)
+```
+<br>
+
+Following this, visual residual analysis was done.
+
+1. **Linearity**: The crooked line in the residuals vs fitted plot indicates non-linearity in the relationship between taste and liking. With this amount of data, and no egregious departure, I can't out of hand dismiss linearity. 
+2. **Normality**: The QQ plot shows departure at the ends. Perhaps not enough to worry about given the small data set. A density plot of the residuals does show a double peaked distribution, indicating that there may be two subgroups. Maybe liked tastes (umami, sweet,sour) and the unliked tastes (bitter and sour). Again, given the small data set and lack of major departure in the centre of the QQ plot, the normality assumption appears satisfied.  
+3. **Homoscedasticity** the curved/humped line with an upward trend in the scale - location plot, appears to indicate that homoscedasticity is violated. It implies the spread of residuals changes systemically across the fitted values. We see the residuals clustered low to the left and spreading out in the upper regions as the line moves to the right. However, this isn't really obvious enough to assume linearity fails. I will assume homoscedasticity is satisfied.  
+4. **Independence** appears satisfied by visual inspection of the residuals vs fitted plot. There is no egregious pattern of non-randomness. Only perhaps two sub groups as mentioned with the left cluster and right spread. Assume independence is satisfied. 
+
+<br>
+
+Because I can't strongly fail any assumption, even though I am suspicious, I will continue with this model and visualise the actual vs fitted values for likeness. 
+
+```{r residual plots}
+plot(model1)
+plot(density(model1$residuals))
+```
+<br>
+
+Finally, looking at the actual vs fitted plot, the model does not seem misspecified. The concern over the MSE being large is unfounded. The model fits quite well, it doesn't appear to be over fit. Unlike the more complex model (in the second graph) which appears very over specified.
+
+<br>
+
+
+```{r model 1 actual vs fitted}
+df_model <- data.frame(
+  Actual = df_list$Liking[["liking"]],
+  Fitted = model1$fitted.values
+)
+
+ggplot(df_model, aes(x = Fitted, y = Actual)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+  labs(title = "Simple linear model Fitted vs. Actual Values",
+       x = "Fitted Values",
+       y = "Actual Values") +
+  theme_minimal()
+```
+```{r model 2 actual vs fitted}
+df_model <- data.frame(
+  Actual = df_list$Liking[["liking"]],
+  Fitted = model2$fitted.values
+)
+
+ggplot(df_model, aes(x = Fitted, y = Actual)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+  labs(title = "Complete interaction model Fitted vs. Actual Values",
+       x = "Fitted Values",
+       y = "Actual Values") +
+  theme_minimal()
+```
+
+
+#### Q5c - What does it all mean?
+
+*Describe this model using non-statistical jargon and explain how this model might inform your menu choices.* <br>  
+Bugs, like all other ingredients are liked more if they possess umami and sweetness. Saltiness doesn't hurt. Bitter and sour are not typically going to result in high likings, but you can still get liked bugs if they are balanced with other tastes.  
+Therefore, treat bugs like you would any other ingredient (assuming the customers lack a mental block to eating them). Pick ones with high umami and you won't really go wrong. Few insects are highly liked, above 80. Most are not liked (below 50). This really helps limit what ones you may want to use. Use ones 75 or higher for best results, as these must by definition of the model (and the PCAs done above) have high umami, sweetness and typically saltiness to counter act any bitter or sour tastes. All tastes people have a biological urge to like. 
+
+### Q6 - Your Menu (15 marks)
+
+*Design three (simple!) courses for your opening menu using bug-based food. Justify any decision made using your analysis and conclusions above. The three courses can be of any combination type (e.g., three starters, or one main and two desserts etc.), and should be constrained to those characteristics that you have information for (i.e., are in the survey).*
+
+
+Insects/bugs, are small and annoying to work with to create dishes. They are costly to acquire and process, so you aren't likely to break even. Additionally, they are often difficult to make into dish 'stars' because they have lesser flavours than commonly available ingredients. Unless they are dehydrated to increase their potency, which is overkill because dehydrated bugs are flaky and dry out the mouth. All this points to the use of insects as seasoning or ingredients in other dishes. An example form a place I used to work at was Danish Orange ants served live on creme friache. The taste of a zingy orange was the pheromones of the ants panicking as they were eaten. This was considered novel at the time, and because they aren't cute, no one cares about animal cruelty when insects are involved.
+
+<br>
+
+**Entree**: Termite crackers with taramasalata: Termites are not sour, mildly sweet, quite bitter, salty and umami. That sounds like a toasted grain. Toasted rye or wheat berries, but with umami added. Their flavour is seaweed, mouldy, mushrooms, pungent. Getting them fresh will remove the pungency. They are crunchy. Pairing well with rice, savoury snacks or eaten alone. So, leaning into this we will puree the termites, use them with a binding agent such as rice or rye flour, then make thin crackers. These can be topped with toasted seaweed salt for extra taste. This is then served with a nice salted cod roe taramasalata, which goes very nicely with rye crackers and slightly bitter crackers (dark bread crisp is often used) to offset the salty softness. 
+
+<br>
+
+**Main**: Duck a la lemon ant - live. In order to thicken sauces, one can use a protein that coagulates as it heats to thicken the sauce. Blood sauce is thickened this way, and using egg yolk or cream is another example of this. This dish is a play on Duck a la orange. The sauce is instead thickened with a puree of lemon ants. They need to be pureed alive in order to extract their delicious panic. Then the liquidated protein can be used to thicken and season the duck pan juices. We can then get some dried ants, mix them with pepper and season with a lemon ant pepper for presentation. Duck al a orange is a simple dish to make. The sauce is made with orange segments, juice, sugar and vinegar - called a gastrique. Here we use lemon ant gastrique to cut through the rich, oily duck fat and season the meaty duck. This sweet - sour - umami combo is a nice follow on from a salty and slightly bitter entree. Salt in high amounts dampens the palette, so the fruity ant sauce will liven it once again. A typical side dish is some form of potato, but here I'd let the meat and sauce to the work, and not crowd the dish at all.    
+
+<br>
+
+**Dessert**: Morio worm creme caramel: having eaten witchetty grubs in Australia as a kid, I know from experience that the worst part about grubs is the exoskeleton. It can get stuck in your teeth. To get around this I won't use the skeleton. Their flavour is vanilla, and they taste sweet and fresh. Getting them un-dried will remove the pungency and dried mould/straw flavours. For this dish, the grubs are infused in hot milk for a while until their taste and flavour is extracted into the milk. This milk is used to make a creme caramel With extra vanilla and sugar to hide the any unwanted flavours. After eating a sweet and piquant main, a creamy dessert will calm the palate. Any sort of side can be served here. Fresh fruit is common and would be a nice touch with any lingering morio worm freshness that survived the cooking process. 
+
+<br>
+
+Note: simple is a relative term. These are simple for me. And are more interesting that some type of sandwich or salad. Additionally, no unique tools are required. Only basic skills are required. They may sound tough, but they are not. 
+
+```{r INSECTS TO COOK WITH, fig.width = 10}
+EDA_df %>% filter(insect %in% c('Lemon_ant', 'Morio_worm', 'Termites'))  %>%
+  group_by(Measure) %>%
+  ggplot(aes(x = Characteristic, y = insect, fill = Score)) +
+  geom_tile(color = "white", linewidth = 0.5) + 
+  scale_fill_viridis_c(option = "inferno", direction = -1) + 
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1), 
+    panel.grid = element_blank()
+   ) +
+  labs(fill = "Score", title = 'Insect characteristics', x = "", y = "") +
+  labs(title = 'Top three Insect pairing heat map')
+```
+
+
+
+### Q7 - New Insects (10 marks)
+
+*Your supplier has just informed you of three newly FSANZ approved insects that you did not include on your original survey. Using the following characteristics, would you expect them to be liked or not and why?*
+
+**BugA: fresh, crunchy, sweet.**  
+**BugB: mushroom, soft, salty.**  
+**BugC: fish, pungent, umami.**  
+
+Based on these data alone:
+<br>
+
+1. BugA: Yes. It has the three of the main liked characteristics. Freshness is 100% correlated with being liked. Crunchy is too. Sweet is relatively highly correlated (0.5). It is similar to a lemon ant.
+
+<br>
+
+2. BugB: Yes, but maybe around 50-60 liking. Soft and salty are both liked characteristics (0.5 and 0.6 correlated), but mushroom is only weakly correlated with being liked. PC2 taste is loaded on salty. However, with no further info, I think this insect is middling at best.
+
+<br>
+
+3. BugC: Yes, around 50. Fish and pungent are negatively correlated with liking (-0.6 and -0.9 respectively). Wile umami is highly
+correlated (100%) with liking. However, insects like the bamboo worm have only got umami going for them, and have liking scores in the 70s. This insect hadn't got any other desirable characteristics, so it would score lower. PC1 on flavour would rank it low, while PC1 on taste would prop it up. Another middling bug. 
+
+
+# Bibliography
+For all reference code for graphs I used this source:\
+
+1. R Graph Gallery (2025). _The R Graph Gallery_. https://r-graph-gallery.com/  
+

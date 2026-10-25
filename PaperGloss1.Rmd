@@ -1,0 +1,205 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+author: "Staff member responsible for this workshop: Jonathan Godfrey a.j.godfrey@massey.ac.nz"
+date: "last updated 04 March 2025"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and images.
+- Before you proceed, test the template works for you, and fix any errors.
+
+
+# Practical Exercise: Blocking and Randomised Complete Block Designs 
+
+This exercise is useful for the following courses:
+
+- 161.222;
+- 228.371;
+- and general revision on experimental design topics.
+
+## Aims of this practical exercise
+
+
+In this exercise you will:
+
+- Identify blocking variables versus treatment variables
+- Use blocking to account for experiment's design,
+- Fit a randomised complete block design in R
+- Calculate marginal means in R
+
+
+## Before you undertake this exercise...
+
+Let's load the packages we will need.
+
+
+``` {r}
+library(tidyverse)
+library(janitor) #might need to install
+library(emmeans) #might need to install
+```
+
+
+## Blocking
+
+Scientific experiments can be ruined if some confounding/nuisance variable is not taken into account in our experimental design. Many small problems with confounding can be avoided by randomising our treatments, but some nuisance variables can affect large sections of our experiment at once, in which case randomisation alone will not save our experiment.
+
+If a nuisance variable is known and can be planned for by the experimenter we use blocking. A 'block' is a section of our experiment that is homogeneous with respect to the blocked variable. The process of 'blocking' is designing an experiment to allow for the confounding variable by keeping it constant within blocks throughout the experiment, and including the blocking variable in our model.
+
+
+Another source of blocking arises when we cannot or choose not to fully randomise treatments to experimental units for some reason. The experiment used in this exercise is of this form because it was decided to ensure there was equal replication of all treatment combinations to the two days used for conducting the experiment.
+
+In this workshop we will be looking at randomised complete block designs, which are experiments where the blocks are all of equal size, and the treatments have been randomly allocated to the experimental units within a block.
+
+### Identifying blocking variables
+
+For the following theoretical experiments, write down: 
+
+* The treatment factor
+
+* The blocking variable
+
+* How you might design the experiment to incorporate blocking.
+
+Experiments:
+
+1. A biochemist has identified a new compound that may work as an improved painkiller, and wants to test if it performs better than paracetamol, but is concerned that it might affect male and female test subjects differently. They have funding to recruit 80 test subjects as they choose, and have 40 doses each of paracetamol and their new drug, Amdir.
+
+Treatment: administer pain killers to subjects. Admir vs paracetemol
+Block: subject's sex.
+Design: select 40 men and women. give 40 people randomly admir and 40 randomly paracetmol. Ensuring sex distribution is random between each block and even eith respect to the treatment. Each block gets 20 of each drug. each sex gets 10 of each. 
+Randomise the block. randomly allocate the treatment, but Control the treatment's distribution across the blocks.  
+
+
+2. An ecologist is studying differences in the length of evening birdsong in suburban backyards due to human feeding of wild birds. They want to test if having a bird feeder present changes the mean birdsong duration. They notice that some of the differences they have found seem to disappear in inner city areas where there is heavy traffic and background noise. They have funding for 20 bird feeder stations, and have enough time to conduct 40 birdsong surveys.
+
+Treatment: feeding of birds. feeder absent/present. 
+Block: Urban environment
+Design: randomly allocate feeders to the locations selected in each group. two treatments within each group.
+Then assign feeders randomly within each group ensuring even distribution of treatment across each blocking variable. 
+
+1. identify nuisnace facotrs
+2. form homogenous blocks of experimental units so each unit is as simlar as possible withr respect to  blocking factor
+3. randmoise treatment within each block to obtain unbiased estimates and prevent confounding
+4. analyse
+
+
+## Paper gloss dataset
+
+The following dataset is from a paper plant which produces large rolls of paper. The paper is run through a machine called a 'super calendar' to provide a gloss to the paper.
+
+In this example, the response variable is the gloss of the paper. The treatment variables speed (S), pressure (P), and temperature (T) have been combined together into a single treatment factor called Treatment. For example, Treatment 1 is low-speed, low-pressure and low-temperature, while treatment 8 is high-speed, high-pressure, high temperature. For each treatment, 3 replicate measurements are taken of the paper's gloss on each day.
+
+The concern for the experimenters is that other time-related process factors, such as wood mix, grinding conditions, or added bleach, would also affect the outcomes. These nuisance variables won't change from moment to moment, but they will change from day to day. The experiment was therefore repeated on two separate days with differing wood mix etc. In other words, we cannot use these nuisance variables to determine the variability of experimental conditions so we use the day as a factor because there is less variability within days for these nuisance variables.
+
+
+``` {r}
+Paper.wide <-read.csv("https://R-Resources.massey.ac.nz/reworked/SandersEtAl2002.csv") |>
+glimpse()
+```
+
+#### Data cleaning and preparation
+
+We note that R is treating our factors 'Day' and 'Treatment' as integers, not factors. If we use them as integers, R will think we are doing regression, so lets set them to be factors.
+
+
+``` {r}
+Paper.wide  = Paper.wide  |>
+  mutate(across(c(Day:Treatment), factor))
+```
+
+We have our three replicates in three separate columns, but we need them to be in one column, as they are our response variable, so we will use `pivot_longer()` to get them in **long** form instead of the **wide** form.
+While we are at it, we can drop the columns we won't be using.
+
+
+``` {r}
+Paper.long <- Paper.wide  |> 
+  select(Rep1,Rep2,Rep3,Treatment,Day) |>
+  pivot_longer(cols=c(Rep1,Rep2,Rep3),values_to = "Gloss",names_to = "Replicate") |> 
+  arrange(Day,Treatment,Replicate) |>
+glimpse()
+```
+
+Great. Now lets look at how many replicates we have in each group using `tabyl()`.
+
+
+``` {r}
+Paper.long  |>
+  tabyl(Treatment, Day)
+```
+
+The table shows our two days and 8 treatments. We can see that our design is balanced: there are equal sample sizes for each treatment within each block.
+
+### The model
+
+We will fit our randomised complete block design using the following linear model:
+
+$$G_{ij} = \mu+ D_{i} + T_{j} +\varepsilon_{ij}$$ 
+
+Where $G_{ij}$ is the gloss, $D_{i}$ is the day, $T_{j}$ is the treatment, and $\varepsilon_{ij}$ is the residual random error.
+
+We should add our blocking term to our model first, because our experimental design was constrained first by the blocking variable, and treatments were randomised within those blocks. This will not make a difference if our experiment is balanced in design, but becomes important if we ever have colinearity in our factors.
+
+**Using the function `lm()` fit the model above, then use `anova(my.lm)` to examine the results.** If you are stuck on the syntax to use, try looking at some of the examples in the lectures.
+
+
+- What can we conclude about the effect of the treatments on gloss?
+  It is significant between treatment groups
+  
+- What can we conclude about the effect of Days on paper gloss?
+  It is not significant between treatment groups.
+  
+
+```{r}
+Paper.lm1 <- lm(Gloss ~ Day + Treatment, data = Paper.long)
+anova(Paper.lm1)
+```
+
+
+#### Calculating marginal means
+
+We need to calculate the mean effect of each treatment taking into account the effect of days (small though it was). For this we can use `emmeans()`
+
+
+``` {r}
+emmeans(Paper.lm1, "Treatment")
+plot(emmeans(Paper.lm1, "Treatment"))
+```
+
+Treatment 1 was low-speed, low-pressure and low-temperature. **Which treatments gave significantly higher mean gloss than treatment 1?**
+A: treatments 2, 3 and 4 
+
+#### Testing if treatments are consistent across days
+
+In theory, we set up our experiments assuming there can be no interaction with the blocking variable. If there is an interaction, it means that the effect of our treatment is not consistent across blocks, which implies there is something important in our blocking variable changing what each treatment does. In these cases we will need to go back and take a closer look at how the blocking variable might be influencing the treatment.
+
+We can test for an interaction between two factors in R by putting an asterisk (*) between them in our model. Let's try that now.
+
+
+``` {r}
+Paper.lm2 <-lm(Gloss~Day*Treatment,data=Paper.long)
+anova(Paper.lm2)
+```
+
+**What can we conclude from the result above?**
+No significant interaction between our blocking variable, days and our treatments. indicating treatment effects are consistent across days. I.e. the day doesn't change the gloss an more under one treatment than another. 
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/practicals/PaperGloss1-sols.html)

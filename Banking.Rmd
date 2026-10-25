@@ -1,0 +1,155 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+subtitle: 161.222 Design and Analysis of Experiments and 228.371 Statistical Modelling...
+author: "Staff member responsible for this workshop: Jonathan Godfrey a.j.godfrey@massey.ac.nz"
+date: "last updated 17 February 2025"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+library(FrF2)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and images.
+- Before you proceed, test the template works for you, and fix any errors.
+
+
+# Practical Exercise: Fractional factorial experiment 
+
+
+## Aims of this practical exercise
+
+
+In this exercise you will:
+
+- use tools for $2^k$ experiments in a fractionated experiment setting.
+
+## Before you undertake this exercise...
+
+
+Get the necessary add-on packages:
+
+
+## Banking Example
+
+Source: Ch 9 "Case Studies", Pages 129-209, of Antony, J. (2023)  Design of Experiments for Engineers and Scientists (Third Edition), Elsevier. https://www.sciencedirect.com/science/article/pii/B978044315173600024X
+
+The bank in this exercise was experiencing a 60% reprocessing rate on applications due to incomplete information provided by customers. 
+
+
+Factors	| Labels	| Low level	| High level
+--- | --- | --- | --- 
+Application type	| A	| Loan	| Lease
+Region	| B	| Midwest	| Northeast
+Description	| C	| Current	| Enhanced (additional explanation provided)
+Example	| D	| Current	| Enhanced (additional examples provided)
+Negative example	| E	| None	| Yes
+
+
+``` {r}
+Banking = read.csv("Banking.csv") |> mutate(across(A:E, as.factor)) |>
+glimpse()
+```
+
+
+## Required
+
+Q: How fractionated is this experiment?
+There are five factors in 16 runs, so it is a half fraction.
+
+```{r}
+MyDesign = FrF2(nruns = 16, nfactors = 5, randomize = FALSE)
+MyDesign
+```
+
+```{r}
+Banking
+```
+
+
+
+Q: Which effects are aliased? Hint: look at the (correct) ANOVA table to see which effects you **can** estimate.
+```{r}
+Banking.full = lm(Average.percentage.complete~A*B*C*D*E, data=Banking)
+aliases(Banking.full)
+Banking.full |> anova()
+```
+
+
+Q: Which effects are significant?
+
+Appears that factors C and D are significant. as they deviate from the reference striagh line (Daniel plot) and thex exceed the ME and SME in Lenth plot. 
+```{r}
+DanielPlot((Banking.full), half = TRUE)
+```
+
+```{r, fig.width=15, fig.height=6}
+# BsMD::LenthPlot(Banking.full)
+
+# Extract coefficients (excluding intercept) and remove NAs
+effects <- coef(Banking.full)[-1]
+effects_clean <- effects[!is.na(effects)]
+
+# Generate Lenth plot
+BsMD::LenthPlot(effects_clean, yaxt = "n", ylab = "effects")
+axis(side = 2, las = 2) 
+```
+
+```{r}
+all(is.finite(coef(Banking.full)[-1]))
+class(coef(Banking.full)[-1])
+
+
+any(is.na(Banking.full$coefficients))
+is.numeric(coef(Banking.full)[-1])
+```
+
+
+
+```{r}
+MEPlot(Banking.full)
+
+```
+
+
+```{r}
+IAPlot(Banking.full, select = 1:5)
+```
+
+
+Q: What are the recommendations resulting from this experiment?
+You need more data points. 
+
+```{r}
+Banking.2= lm(Average.percentage.complete~C+D, data=Banking)
+aliases(Banking.2)
+Banking.2 |> anova()
+```
+
+```{r}
+plot(Banking.2)
+```
+```{r}
+emm <- emmeans::emmeans(Banking.2, ~ C*D)
+pairs(emm, adjust = "tukey")
+plot(emm)
+```
+the two factors that matter are Description and example. When the data have enhanced and enhanced they vary significantly. Enhanced has higher average completion rate. 
+
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/161222/practicals/Banking-sols.html)

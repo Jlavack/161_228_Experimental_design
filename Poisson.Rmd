@@ -1,0 +1,164 @@
+---
+title: "Poisson"
+author: "John Lavack 20001249"
+date: "2026-05-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(sjPlot)
+```
+
+# Popcorn
+
+```{r}
+Popcorn <- read.table("popcorn.txt", header=TRUE)
+Popcorn <- Popcorn |> mutate(across(Temperature:Time, factor))
+```
+
+```{r}
+Popcorn %>% glimpse()
+```
+
+
+The response is the number of inedible kernels; the predictors are the temperature, the amount of oil used, and the cooking time.
+
+Fit the additive model fitting the main effects as factors. Examine the results of this model.
+
+```{r}
+m1 <- glm(Inedible ~ Temperature+Oil+Time, data=Popcorn, family=poisson)
+summary(m1)
+```
+```{r}
+anova(m1,test="Chisq")
+```
+
+2. Based on this output (and other commands as you see fit) find the best single factor model (call it m2). Make the diagnostic plots. Consider whether this model fits well - if it does, the following test should be non-significant.
+Could use a step function to preform a stepwise regression or do this by hand and compare AIC scores or you couls interpret the anova table from the full model deciding that only oil was significant.
+
+```{r}
+# the step function preforms a step wise procedure dropping terms, fitting the model, then calculating the AIC and comparing to the original model (labeled <none> below). It then repeats the process for each term.
+
+step(m1) 
+```
+
+```{r}
+m2 <- glm(formula = Inedible ~ Oil, family = poisson, data = Popcorn)
+plot(m2)
+```
+
+```{r}
+pchisq(m2$deviance, m2$df.residual, lower=FALSE)
+
+```
+
+This test is significant, suggesting this may not be a great fit.
+
+3. What was the predictor in the best single variable model? Do the diagnostic plots for this model reveal any problems?
+There are some high influence points we should be concerned about. There are also some groupings of residuals suggesting that there might be an unmodeled variable that causes these.
+
+4. Do either of the models (3 predictors or 1 predictor) fit well? How can you tell?
+
+The model with more predictors does not have the grouping issue but still has points with high leverage. The pvalue of this test also suggests that it does not fit great.
+
+```{r}
+pchisq(m1$deviance, m1$df.residual, lower=FALSE)
+```
+
+```{r}
+plot(m1)
+```
+
+Can compare the models with a test of deviance. This result suggest that they are not very different, one does not fit very differently than the other.
+```{r}
+anova(m1, m2, test= "Chisq")
+
+```
+
+5. How does the standard deviation of the Y values for a fixed value of the predictor relate to the predicted value at that point?
+This is an exploratory question, aiming to demonstrate how do you find and plot predicted values as well as thinking about variability in your variables.
+
+```{r}
+plot_model(m2, type = "pred")
+```
+
+```{r}
+# predicted values
+Popcorn$pred_y <- predict(m2, type = "response")
+
+Popcorn |> ggplot()+
+  aes(x= Oil, y = Inedible)+
+  geom_point()+
+  geom_point(aes(x=Oil, y= pred_y), color='lightblue')+
+  theme_minimal()
+```
+
+Once I add the prediction to the dataset you can see that for individual levels of Oil we get one prediction value.
+
+```{r}
+Popcorn |> ggplot()+
+  aes(x= Oil, y = Inedible)+
+  stat_summary(fun="sd", geom="point")+
+  geom_point(aes(x=Oil, y= pred_y), color='lightblue')+
+  theme_minimal()
+```
+Here I plot the standard deviation of the observed data in black and the the predicted value in light blue. We only have a few oil levels here but at oil 2 there was low variability in the measured inedible variable and high predicted inedible while other oil levels have higher measured inedible variable and lower predicted inedible variable. Do you think it would always be the case? What about if you look at the multiple predictor model?
+
+# Simple Logistic Regression
+
+Consider the data in Download SurfaceToAir.txt, which records the velocity of the target and whether the surface to air missile system being tested hit (1) or missed (0).
+
+```{r}
+Surface <- read.table ("SurfaceToAir.txt", header=TRUE)
+
+```
+
+Here speed is treated as a continuous variable since it is measured.
+
+Run a simple logistic regression
+
+```{r}
+Surface.glm1 <- glm(y ~ TargetSpeed, data=Surface, family=binomial(link = "logit"))
+summary(Surface.glm1)
+```
+
+2. Find the probability of hitting the target at one of the target speeds used in the experiment.
+
+```{r}
+Surface.glm1$fitted[Surface$TargetSpeed==220]
+```
+
+
+
+# or by hand
+
+```{r}
+exp(6.070994-0.017705*220)/(1+exp(6.070994-0.017705*220))
+```
+
+
+The expression for $E(logit(pi)) when xi=220 is 6.070994-0.017705*220.$ This is called the “linear predictor” and can be extracted with:
+
+```{r}
+Surface.glm1$linear[Surface$TargetSpeed==220]
+```
+
+3. Using the predict function, compute the probability of hitting the target when the speed is 257km/h.
+
+```{r}
+newdata=data.frame(TargetSpeed=c(257))
+predict(Surface.glm1, newdata, type="response") # on the response scale = probability
+```
+```{r}
+predict(Surface.glm1, newdata, type="link") # link here is logit, so this is on the log-odds scale
+
+```
+
+4. What has a linear relationship with Target speed?
+The log odds is linearly related to target speed.
+
+The link function in glms act to convert the response scale (which is not linear) to a linear scale. Since we used the logit link we are on the log odds scale.

@@ -1,0 +1,124 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+subtitle: 161.222 Design and Analysis of Experiments and 228.371 Statistical Modelling...
+author: "Staff member responsible for this workshop: Jonathan Godfrey a.j.godfrey@massey.ac.nz"
+date: "last updated 17 February 2025"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+library(FrF2)
+library(BsMD)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and images.
+- Before you proceed, test the template works for you, and fix any errors.
+
+
+# Practical Exercise: A fractional factorial experiment 
+
+
+## Aims of this practical exercise
+
+
+In this exercise you will:
+
+-  gain experience working with fractional factorial experiments.
+
+## Before you undertake this exercise...
+
+
+Get the necessary add-on packages:
+
+
+## Crack length of welds
+
+
+The objective of the experiment was to identify the significant welding parameters and to determine the optimal parameter settings which gave minimum crack length (cm).
+
+Welding parameters	| Labels	| Low level	| High level
+--- | --- | --- | --- 
+Current	| A	| 110	| 135
+Bead length	| B	| 20	| 30
+Electrode make	| C	| X	| Y
+V-groove angle	| D	| 45	| 60
+Welding method	| E	| 1	| 2
+
+
+``` {r}
+Welding = read.csv("Welding.csv") |>
+glimpse()
+```
+
+
+## Required
+
+Q: Confirm the design generators (aliasing pattern) are D=AC and E=ABC; then identify the full defining relationship I=?=?=?.
+
+```{r}
+model1 = lm(Rep1~A*B*C*D*E, data=Welding)
+aliases(model1)
+model1 |> anova()
+```
+
+```{r}
+model2 = lm(Rep2~A*B*C*D*E, data=Welding)
+
+coefficients_clean <- na.omit(coef(model2))
+aliases(coefficients_clean)
+model2 |> anova()
+```
+
+
+
+
+Q: Determine the optimal settings of the five factors. 
+
+
+```{r}
+effects <- na.omit(coef(model2))
+
+# Generate main effects plot
+FrF2::MEPlot(model1)
+```
+
+
+```{r}
+IAPlot(model1, select = 1:5)
+```
+
+```{r}
+BsMD::LenthPlot(effects, yaxt = "n", ylab = "effects")
+
+```
+
+```{r}
+DanielPlot((model2), half = TRUE)
+
+```
+
+
+
+## Additional
+
+Three confirmatory trials based on the optimal settings were performed and crack lengths of 0.31, 0.46 and 0.32 mm were observed.   We should check this matches our expectations using a model for prediction purposes.
+
+The author notes, ". Each trial condition was replicated twice to create adequate degrees of freedom for the error term." Is this actually correct? Hint: Look at the run order. It rather suggests the two reps were done at the same time.
+
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/161222/practicals/Welding-sols.html)

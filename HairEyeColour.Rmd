@@ -1,0 +1,81 @@
+---
+title: Massey University --- School of Mathematical and Computational Sciences  
+author: "Staff member responsible for this workshop: Mel Whitehead m.whitehead@massey.ac.nz"
+date: "last updated 1 April 2026"
+mathjax: 
+output:
+    html_document:
+        theme: yeti
+        highlight: tango
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment="", dev="png")
+knitr::opts_chunk$set(fig.align="center", fig.alt="to fix")
+library(tidyverse)
+```
+
+
+N.B. Please note the following:
+
+- Read the full workshop before using this template. External files (images, raw data files, etc.)  are not included in your template.
+- The above chunk is setting some global options for the rest of this document. It isn't strictly necessary.
+- The template worked on my computer, but I have access to all external files, including the data and images.
+- Before you proceed, test the template works for you, and fix any errors.
+
+# Practical Exercise: Correspondence Analysis (CA) with real-data
+
+This exercise is useful for:
+
+- 161.228,
+- anyone who wants to practice CA with real-data.
+
+## Aims of this practical exercise
+
+In this exercise you will:
+
+- Run CA on real-data, 
+- Visualise the results,
+- Interpret these results in context.
+
+## Before you undertake this exercise...
+
+Let’s load the packages we will need.
+
+``` r
+library(FactoMineR) # might need to install
+library(factoextra) # should have from last week
+```
+
+## Hair Eye Colour
+
+This exercise follows the same process, and uses the same data as for CA Example 1, blurb repeated here. 
+
+In class, we looked at the relationship between Hair and Eye colour for male students, in this exercise we will repeat this for female students.
+
+```r
+data(HairEyeColor)
+print(HairEyeColor)
+```
+
+The data shows the relationship between hair and eye color among the students, split by male and female. For example, there were two female students with green eyes and black hair, and three male students with green eyes and black hair.
+
+These data are provided as _contingency tables_ (frequencies), this is good.
+
+## Required:
+
+Perform a Correspondence Analysis for the female data.
+
+Make sure you:  
+
+- Replace HairEyeColor[,,1] (male) with HairEyeColor[,,2] (female)
+- Consider how many dimensions you want to keep and why,
+- Use suitable plots to represent your CA results,
+- Use suitable numeric outputs to represent your CA results,
+- Describe your findings in context,
+
+
+## Solutions
+
+You should compare your work with the [solutions for this workshop.](https://R-Resources.massey.ac.nz/practicals/HEC-sols.html)

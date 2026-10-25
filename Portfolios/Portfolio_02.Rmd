@@ -1,0 +1,194 @@
+---
+title: "Portfolio_Task_2"
+author: "John Lavack 20001249"
+date: "2026-03-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  fig.width = 8,    
+  fig.height = 6, 
+  fig.align = "center"
+)
+
+library(rstatix)
+library(ggpubr)
+library(tidyverse)
+library(mgcv)
+library(multcomp)
+
+#the Batch is an integer, but it is a factor in reality, so will convert to factor. 
+data <- read.csv("https://R-Resources.massey.ac.nz/161228/PortfolioTasks/OneWay2649.csv") %>% mutate(Batch = as.factor(Batch))
+```
+
+# Exploratory data analysis
+
+There appears to be some difference between the batch scores within the interquartile ranges of the boxes on the box plot. However, there is some over lap, especially when considering outliers in batches 1 and 2. 
+And it is difficult to say for certain as each batch is a sample of 5. Making each part of the box plot one score. 
+At first glance it appears there may be some batch differences worth exploring. 
+
+```{r}
+data %>% group_by(Batch) %>% summarise(n = n())
+```
+
+
+```{r box plot}
+data %>% ggplot(aes(x=Batch, y = Score)) + geom_boxplot() +
+  labs(title = 'Coffee estimated liking by batch')
+```
+
+
+# Fitting models
+
+## Linear model
+While the linear model on the data indicates a significant intercept and batches 3 and 4 coefficients, an Anova test on the raw data indicates significant batch difference with F value of 3.57 and P-value of 0.01. Not a strong association. 
+This doesn't change significantly with a log transformation of the data. 
+
+```{r linear model}
+coffee_lm <- lm(Score ~ Batch, data = data)
+summary(coffee_lm)
+#basic anova
+anova(coffee_lm)
+
+#log transform
+anova(lm(log(Score) ~ Batch, data = data))
+
+```
+
+## Non-parametric model
+
+As the data is small in batch sample size, not really normally distributed, with outliers that can't be removed (because they are sizable portions of the sample size in their batches) and the response variable is ordinal (a 'liking' score), a non-parametric test is worthwhile performing. 
+A GAM model (general additive model which fits here because the batch variable is categorical) shows that batch is weakly significant. 
+In this model the s(Batch, bs = "re') term treats the batch as a random effect. It assumes batches were randomised. While method = 'REML' results in better model estimation of variance components. 
+
+```{r}
+coffee_gam <- gam(Score ~ s(Batch, bs = "re"), data = data, method = 'REML')
+
+summary(coffee_gam)
+```
+
+
+Checking this with a Kruskal-Wallis test shows no significant difference between groups. Chi-squared value of 6.98 and P-value of 0.07. 
+Fail to reject the null hypothesis.
+
+```{r model analysis}
+#non-parametric test
+kruskal.test(Score~Batch,data=data)
+
+```
+
+As the Kruskal-Wallis test showed no difference between groups, a post hoc Dunn test confirms there is no significant difference between any batches. 
+
+```{r}
+print(data %>% dunn_test(Score ~ Batch, p.adjust.method = "bonferroni"))
+```
+
+
+# Residual Analysis
+
+## Linear residuals
+There is clear uneven variance between the residuals and the batches. Some have much larger variance than other batches. Batch 3 for example has far less variance, while batches 1, 2 and 4 have wide, but not even variance between groups. Indicating perhaps a confounding variable(s) at play. 
+The residuals and fitted plot indicate a non-linear trend as there is a clear patern within and between groups. 
+The residuals are not normally distributed, as the Q-Q plot show clear deviation from normality.  
+The scale location plot confirms the lack of homoscedasticity with an uneven trend line. 
+The constant leverage plot indicates that the residuals are not evenly distributed across factor levels, but lack a clear trend. It would appear that batches 1 and 2 are more similar to each other, as are batches 3 and 4. These two pairs are not similar to each other. 
+An autocorrelation plot show only one spike beyond confidence bands, indicating no serious auto-correlation. Which is confirmed by a L Jung test with lag of 2 which fails to reject the null hypothesis of no auto-correcaltion (P-valu 0.32). 
+
+Residuals are not normal: Normality assumption failed. 
+Residuals are independent: Independence assumption passed. 
+Residuals are heteroskedastic: Homoscedasticity assumption failed. 
+Residuals are not linear: Linearity assumption failed. 
+
+Therefore, the conclusions drawn from this model are misleading. 
+
+```{r residual analysis plots}
+par(mfrow = c(2, 2))
+plot(coffee_lm)
+
+```
+
+```{r}
+acf(coffee_lm$residuals, main = "ACF of Residuals")
+```
+```{r}
+Box.test(residuals(coffee_lm), type = "Ljung-Box", lag = 2)
+
+```
+
+
+### Tukey analysis 
+
+Finally, a Tukey analysis of the family-wise comparisons indicates no significant difference due to the high level of overlap between all comparisons at the 95% confidence level. 
+This confirms the results of the ANOVA
+
+```{r}
+coffee_tukey <- glht(coffee_lm, linfct = mcp(Batch = "Tukey"))
+coffee_tukey 
+```
+
+
+```{r}
+plot(coffee_tukey)
+```
+
+## GAM residuals
+The GAM residual analysis indicates the following:
+The residuals are more normal as per the QQ plot. 
+The histogram is not bell shaped, therefore data residuals are not normal. There is a longer tail out to the right, or a slight left skew. 
+The response vs fitted do not cluster around the line, indicating there is perhaps non-constant variance or influential outliers. Or a confounding element. 
+The response vs fitted shows uneven scattering of residuals around zero. Again confirming non-constant variance. 
+
+
+```{r GAM residuals anlaysis}
+op <- par(mfrow = c(2, 2))
+plot(fitted(coffee_gam), data$Score, xlab = "Fitted Values", ylab = "Response", main = "Response vs Fitted")
+abline(a=0, b = 1, col = "red")
+
+# op2 <- par(mfrow = c(1, 2))
+plot(fitted(coffee_gam), coffee_gam$residuals, xlab = "Linear predictor", ylab = "Residuals", main = "Resid vs linear predictor")
+abline(h=0, col = "red")
+
+qq.gam(coffee_gam, rep = 100, level = 0.9, pch = 19, cex = 0.5)
+
+hist(coffee_gam$residuals, xlab="Residuals", main = 'Histogram of residuals')
+par(op)
+
+```
+
+### Visualising results of non-paramteric test
+
+Because the linear model assumptions failed, and the results of the non-parametric test were not-significant, it is worthwhile to look at the 'residuals' in a non-parametric way. 
+Below the residuals are approximated by ranking the data and subtracting the medians from observed ranks. These non-traditional residuals can be viewed to spot any patterns between groups. 
+The resulting box plot is very similar to the initial box plot. It shows no patterns across all groups, but does confirm that batches 1 and 2 are more similar to each other than batches 3 and 4. And vice versa. 
+
+```{r non-parametric residuals}
+
+data$ranks <- rank(data$Score)
+
+# Compute residuals (rank - group median rank)
+group_medians <- tapply(data$ranks, data$Score, median)
+data$residuals <- data$ranks - group_medians[data$Batch]
+
+# Plot residuals
+ggplot(data, aes(x = Batch, y = residuals)) +
+  geom_boxplot() +
+  labs(title = "Residuals (Ranks - Batch Median Ranks)", y = "Residuals")
+```
+
+# Statistical conclusion
+There is no difference between estimated liking and the batches used in the experiment. 
+The null hypothesis has failed to be rejected. 
+Any difference between batches observed is the result of random noise. 
+
+# Real world advice
+These data were too few to get a decent analysis. There is perhaps a confounding variable or perhaps not enough experimental units to observe any trends through the random noise. 
+Re-run this experiment with more experimental units per batch. Keep the four batches and the randomisation in the experiment, but run the experiment longer. Aim for 20 experimental units per batch as a minimum. 
+Additionally, capture more data about the person being measured. At least their age+e and sex. And keep data about the setting of the measurements taken. Such as time of day and internal and external temperatures for starters. 
+Perhaps these can help guide the analysis and isolate/identify the unknown confounding variable. 
+
+However, if you are happy with these results, then you can take it on faith that there is no difference between the groups and can proceed with the process which creates the most coffee at the lowest cost to you. 
+
+
+

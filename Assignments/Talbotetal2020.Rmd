@@ -1,0 +1,48 @@
+---
+title: "Cattle diet"
+output: html_document
+date: "2025-05-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Introduction
+This page replicates the analysis given in Talbot et al. 2020. Full article can be downloaded `r xfun::embed_file("Cattle diet_Talbotetal2020.pdf")`
+
+You will need to Download `r xfun::embed_file("Talbotetal2020.csv")`  to replicate the analysis below. You could also Download `r xfun::embed_file(knitr::current_input())` so you can use R markdown.
+
+*Note* the authors collected multiple measurements but only supply the AOB gene abundances with the supplemental material. This will act as the response variable for your analyses.
+
+## Abstract from Talbot et al. 2020
+
+Nitrogen (N) losses from agricultural land is a major environmental concern, as N leaching can cause eutrophication and nitrous oxide ($N_{2}O$) is a greenhouse gas. A lysimeter experiment was undertaken to investigate the effects of cattle diet and winter plant growth on N losses from cattle urine patches. The experiment was conducted using intact soil monolith lysimeters, beneath two different pasture or cropping systems: (i) perennial ryegrass/white clover pasture, and (ii) bare fallow after simulated grazing of fodder beet (beet fallow). Two different cow urine treatments (700 kg N $ha^{-1}$) were applied to each of the crop treatments in June 2017, using freshly collected urine from herds on a diet of either pasture or fodder beet (beet) (supplemented with lucerne silage). Winter plant growth was found to have a large effect on N leaching losses. There were high N leaching losses beneath the beet fallow (335–345 kg N ha−1) compared to the significantly lower leaching loss beneath the pasture (55–121 kg N ha−1). Urine treatment had a significant effect on N losses/transformations beneath the pasture. The pasture with beet urine treatment had 36% lower average ammonia oxidising bacteria (AOB) population abundance, 31% lower soil $NO_{3}$−–N concentration and subsequently 64% lower $NO_{3}$−–N leaching losses than the pasture with pasture urine treatment. The lower AOB population and lower average soil $NO_{3}$−–N suggest a biological nitrification inhibitor effect was present in the beet urine. This study shows the potential of winter plant growth and manipulation of cattle diet in reducing farm N losses.
+
+## Description
+
+The experiment consisted of four treatments, each with five replicates, giving a urine/crop 2 x 2 factorial design. All lysimeters/soil blocks received urine at a rate equivalent to 700 kg N $ha^{-1}$. The treatments were arranged in the trench facility at ADRDS using a randomised complete block design.
+
+Soil samples were taken from the soil blocks to elucidate the mechanisms involved in the transformation of soil mineral N. Samples were taken using a soil corer (100 mm depth, 75 mm diameter) on days 0, 1, 7, 14, 28, 56 and 112 after urine application. Samples were collected on day 0, prior to urine application, allowing changes to be compared to day 0 as a baseline.
+
+In agricultural soil, nitrification is largely driven by soil ammonia oxidising bacteria (AOB) and ammonia oxidising archaea play a lesser role (Di et al. 2009). Therefore, DNA extraction and soil AOB ammonia monooxygenase (amoA) gene abundance was measured.
+
+The data sets were subject to analysis of variance (ANOVA). For each ANOVA, orthogonal contrasts (2 x 2 factorial) were used to determine the significance of the main effect of crop type (pasture vs beet fallow) and of urine type (pasture urine vs beet urine) and their interaction (crop x urine type).
+
+## Relevant Author's results
+The average AOB amoA gene abundance was significantly ($P = 0.005$) lower for the pasture with beeturine treatment (2.2E + 06 *amoA* gene number $g^{-1}$ dry soil) than that for the pasture with pasture urine treatment (3.4E + 06 amoA gene number $g^{-1}$ dry soil) (Fig. 5). The pasture was shown to have significantly lower average AOB amoA gene abundance than that for the beet fallow ($P<0.001$).
+
+## Data import, inspection, and preparation
+
+```{r}
+cattle_amoA <-read.csv("Talbotetal2020.csv", stringsAsFactors = TRUE) |> mutate() |> 
+glimpse()
+```
+
+## Analysis
+
+```{r}
+
+```
+

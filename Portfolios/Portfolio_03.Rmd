@@ -1,0 +1,123 @@
+---
+title: "Portfolio_03"
+author: "John Lavack 20001249"
+date: "2026-03-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  fig.width = 8,    
+  fig.height = 6, 
+  fig.align = "center"
+)
+
+library(tidyverse)
+library(emmeans)
+
+data <- read.csv("https://R-Resources.massey.ac.nz/161228/PortfolioTasks/Bread2649.csv") %>% mutate(Recipe = as.factor(Recipe), Yeast = as.factor(Yeast))
+```
+
+# 1. Fit the model
+
+First, looking at the data it looks like it may fit a linear model well enough. This is what will be fit. 
+
+```{r}
+data %>% mutate(Yeast = as.numeric(Yeast))%>%
+  ggplot(aes(x=Yeast, y = Volume, col = Recipe)) + geom_smooth(method = 'loess', formula = 'y~x', alpha = 0.2, col = scales::alpha('black', 0.2)) +
+  geom_smooth(method = 'lm', formula = 'y~x', alpha = 0.2, col = scales::alpha('red', 0.3)) +
+  geom_point() + facet_wrap('Recipe') +
+  labs(title = 'Yeast impact on bread volume by bread recipe type') +
+  theme_minimal()
+```
+
+The anova test of the linear model shows significant main effects for recipe and yeast (F values 19.17 and 37.54 respectively), but no significant interaction effect.
+The influence of one independent variable's level on volume does not depend on the level of the other. 
+
+Fitting a model without the interaction effect yields the same results. Each model has the same sum sq and mean sq, but the residual values are different due to the simpler model having more degrees of freedom. 
+An anova model between the two models further confirms that the interaction makes no significant improvement to the simpler model. 
+
+The more appropriate model appears to be the more parsimonious one, but is infact the model with interaction effects. The reasoning for this is given in the residual analysis.
+
+
+```{r}
+Bread.lm <- lm(Volume ~ Recipe * Yeast, data = data)
+anova(Bread.lm)
+```
+
+```{r}
+Bread.lm2 <- lm(Volume ~ Recipe + Yeast, data = data)
+anova(Bread.lm2)
+```
+
+```{r}
+anova(Bread.lm, Bread.lm2)
+```
+
+
+
+
+# 2. Residual analysis
+Looking at both models, the first model with the interaction term appears to meet the linearity assumption while being less normal and less homoscedsatic. While the model without the interaction term appears to to be more normal and homoscedastic while less linear. 
+
+
+```{r}
+plot(Bread.lm)
+```
+
+
+```{r}
+plot(Bread.lm2)
+```
+
+Running quick visual diagnostic on each model for the assumptions indicates that:
+
++ both models have normally distributed residuals,
++ both models have homoscedastic residuals,
++ both models have independence of residuals,
++ the model without an interaction term rejects has a much more pronounced curve in the residuals vs fitted plot, indicating that it may be specified incorrectly. While the model with the interaction term has an almost flat line in the same plot.
+
+Therefore, even though adding the interaction term adds no significant difference to the model's significance in an ANOVA test, the interaction model will be kept as it enables all the linear model assumptions to be met. 
+
+
+# 3. Statistical conclusion:
+
+There is strong evidence to support change in volume caused by yeast and recipe independent of one another. 
+The model shows strong evidence that the main effects of yeast and recipe impact the volume of bread observed, post treatment. P valies < 0.001, While the interaction of yeast and recipe is not show significant results (p value of 0.1).
+
+Adding the interaction term widens the confidence interval of the group means. Higher accuracy, less precision. Which can be seen in the emmeans pairwise effect graphs below, where the first show the model with interaction and the second the model without. Note that the change is in the confidence interval widths only. The means stay the same. 
+
+```{r}
+plot(emmeans(Bread.lm, ~ Recipe + Yeast), adjust = "tukey")
+
+```
+
+```{r}
+plot(emmeans(Bread.lm2, ~ Recipe + Yeast), adjust = "tukey")
+```
+
+# 4. Best graph:
+
+Bread volume increases as yeast is increased, in general, but not at all levels. Yeast of 8g produced less volume that east of 6g or 10g in some trials, but more than 2g or 4g of year. Likewise different recipes result in different volumes of bread. Seeded tends to be less voluminous than white or wholemeal, and wholemeal tends to be more voluminous than white bread. 
+While it appears that there is an interaction between yeast and recipe on bread volume, this is not a significant effect. There is enough variability in the data within each treatment level to indicate that while both recipe and yeast influence the volume of the bread, they do not do so together. 
+In general, bread will be greater in volume if the wholemeal recipe is chosen irrespective of the yeast amount chosen (in general, but not at lower levels of yeast). While adding more yeast to any recipe will tend to increase the volume.
+
+This is not consider any potential blocking or confounding variables that impact recipes and yeast, such as temperature, rising time, CO2 content of the dough, age of the yeast, yeast brand, yeast type (alive or dried), quality of the products used in the recipe, or the steps taken by the baker to impact volume mechanically such as pre-sifting the flour, preheating the oven, oven setting, use of a stone bread tray, gluten elasticity obtained through kneading times and other such variables, nor even the recipe for the bread itself, as there is considerable variation within those recipe groups used in this experiment. 
+
+N.B. this author was a chef for over a decade around the world and has extensive bread making experience. 
+
+```{r}
+vol_by_recipe <- data %>%
+  group_by(Recipe, Yeast) |>
+  summarise(meanVolume =mean(Volume), .groups = 'drop')
+
+
+ggplot(data=data ,aes(x=Yeast,y=Volume, colour=Recipe)) + 
+  geom_point() + geom_line() +
+  geom_line(data=vol_by_recipe, aes(x=Yeast, y=meanVolume, group=Recipe, colour=Recipe),lwd=1) +
+  theme_minimal() +
+  labs(title = 'Bread volume changes dependent on yeast quantity and recipe')
+
+```
+

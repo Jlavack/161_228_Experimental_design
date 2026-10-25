@@ -1,0 +1,586 @@
+---
+title: "161.228 Assignment 1"
+author: "John Lavack 20001249"
+date: "02 April 2026"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+library(nlme)
+library(gglm)
+library(emmeans)
+```
+
+
+
+`r xfun::embed_file(knitr::current_input())` 
+
+# Research aims and objectives
+
+
+Do multi sensory queues impact perceived taste and aroma intensity?
+The aim of this experiment is to the the null hypotheses:
+
+1. that multi sensory queues do not impact perceived flavour intensity. 
+2. that multi sensory queues do not impact perceived aroma intensity. 
+
+This will be done by having 12 tasters be subject to a combination of sensory queues prior to and during the tasting of a smooth puree.
+The puree will contain two flavours in equal measure; parsnips and celeriac (root celery). Both the pre-taste queue, called the primer, and the during tasting queue will take the form of one of the two vegetables in the puree. 
+With the aim of testing whether the treatments applied increase the perceived flavour intensity of the relevant flavour in the puree. 
+These two vegetables have been chosen because they are both similar root vegetables with similar textures and overlapping flavour profiles, while at the same time having different notes. Both are sweet and nutty with herbal aromas and tastes. Parsnip is earthier than celeriac, which is more herbal in taste. Each has a similar texture when pureed and they mix well for a consistent texture when using standard blending equipment (non industrial or commercial blenders).
+
+The treatments applied are:  
+
+1. Interacting with either a parsnip or celeriac prior to tasting; touching, viewing, smelling etc.  
+2. Having a visual queue during the tasting of either a parsnip or celeriac by placing the vegetable on the table in front of the taster. 
+
+This will enable the experiment to see if either has an impact in perceived intensity of each taste, and which has more. An immediate visual queue or a prompt prior to tasting. 
+
+Because mouth feel (the texture of food in the mouth) can influence flavour intensity, particularly when chewing the food (Liu et al, 2017), tasters will taste a uniform puree which requires no chewing. In this way the textural component of the vegetables will be controlled. 
+
+
+
+# Three (3) recent articles.
+
+
+1. Yoon, G., Jung, H., Oh, J. (2025). Influence of Temperature and Lemon Solutions on Palate Cleansing for Sensory Evaluation of Atlantic Salmon. _Journal of Sensory Studies. 40_(6). https://doi.org/10.1111/joss.70084.
+  + In this experiment 8 tasters were given a 2 x 2 factorial design to evaluate residual aroma, residual taste, overall residual sensations and oily mouth coating of salmon after taking a palate cleansing protocol. This experiment has a similar structure to what I want, and so the following experiment has been heavily borrowed from in terms of design. 
+
+2. Nash, D., Sloan, G., Code, M., Power, B., McSweeny, M.B. (2025). The Cross-Modal Interaction of White Pepper Included in a Bread Formulation: An Investigation Using Hedonic Scales and Rate-All-That-Apply. _Journal of Sensory Studies. 40_(6). https://doi.org/10.1111/joss.70084.
+  + 84 tasters were asked to evaluate the taste impacts of white pepper in bread at various levels. This experiment uses a similar concept to the one I am designing; the measure of taste intensity of a specific flavours under a sensory queue, which in this case is the presence of white pepper. However, in this experiment tasters are being asked for how much they like the bread, not the intensity of the flavour.  
+
+3. Yoo, J., Harris, D., Penn, J., Stannard, C., Fannin, J.M. (2026). The Effect of Tactile Experience on Preferences and Willingness to Pay: A Case Study of Alligator Hide. _Journal of Sensory Studies. 41_(2). https://doi.org/10.1111/joss.70111Digital.
+  + This experiment looked at the tactile effect on willingness to pay for 145 subjects. Here a similar concept is used. To prime the customers with a tactile experience. In my experiment, I intend to do this and see if this impacts taste and aroma perception. Yoo et al found that tactile marketing could be effective. Perhaps a similar effect could be found for taste and aroma perception.
+  
+
+# Response Variables.
+
+
+The four response variables are perceived flavour and aroma intensity of celeriac and parsnip in the puree. 
+
+These will be measured following the Quantitative Descriptive Analysis (QDA) standard. 
+Tasters will evaluate the intensity of the flavour using a line scale from 1 - 9 with no intensity at 1 and very intense at 9. Judges are engaged multiple times in the experiment in order to assess taster reliability. 
+Although not explicitly called QDA, this is the procedure Yoon et all (2025) followed in their measurement of a variety of residual attributes of tasted salmon. 
+
+QDA is widely used in food science because it produces precise and statistically analysable data on flavour and other sensory characteristics. According to Sidel et al (2018). The data can be analysed with ANOVA methods, making it a statistically sensible scale. 
+The main drawback to this method of measurement is that it is expensive because tasters often need to be trained. This experiment does not assume trained tasters can be found, and instead will brief tasters on how to complete the data collection survey prior to the experiment. However, with the five replications being conducted, cost will increase regardless of taster skill. 
+Given the cost implication, many response variables, four in this case, will be gathered. 
+
+
+# Treatment Factors.
+
+
+There are two factors at in this experiment, each with two levels. 
+
+The first factor is called 'Primer'. This represents the sensory priming done before the trial. Tasters are given one of the two vegetables to touch, smell and hold for a period of two minutes in a space separate to the tasting space before the trial. 
+The priming vegetable is then removed and they are led to the trial area. The purpose of this is to prompt the taster to be thinking about one particular vegetable.
+
+There are two levels:
+
+1. Celeriac: given a celeriac to examine before the trial. 
+2. Parsnip: given a parsnip to examine before the trial. 
+
+The second factor is called 'queue' and it represents the immediate sensory queue on display during the tasting trial. This is done by decorating the table with the vegetable. 
+
+The two levels are:  
+
+1. Celeriac: celeriac is used as the sensory queue.  
+2. Parsnip: Parsnip is used as the sensory queue. 
+
+With these two factors the following 4 combinations will be evaluated:
+
+| Sensory Primer |Sensory Queue |
+|----------------|--------------|
+| Celeriac       | Celeriac     |
+| Celeriac       | Parsnip      |
+| Parsnip        | Parsnip      |
+| Parsnip        | Celeriac     |
+
+Each taster will be subject to all combinations of the factors, making this experiment a 2x2 full factorial design. 
+
+# Randomisation.
+
+Following suit from Yoon et al (2025), randomisation will be applied by having each taster receive each condition in a random order.
+This allows each taster to serve as their own control by being exposed to all experimental conditions. 
+
+Randomisation is applied to give each taster a random order of the two factors. By randomising in this way factors such as mood or fatigue are evenly distributed across the tasters. Thereby limiting the impact of these hidden variables. 
+Sequence related effects are also limited/removed by randomisation, removing (or reducing) the chance of autocorrelation in the residuals.
+
+This use of randomisation makes this a randomised full factorial design. 
+
+# Replication.
+
+Replication will be internal, by having the same tasters repeat the experiment's four conditions five times.
+This makes each replication a repeated measure of the response variables under the factor conditions for each taster. 
+While costly, this will enable analysis of the within-condition (primer and queuing levels) variability and more precise measurements of the mean responses (taste & aroma intensity). 
+
+Having multiple replications makes this a repeated, randomised full factorial design.
+
+# Local Control.
+
+Local control requires homogeneous experimental units and keeping all non-experimental treatments factors constant. 
+By using the same tasters repeatedly across all treatment conditions, local control is achieved. This is a benefit of a within subject design.
+The randomisation minimises variability due to external non-experimental variables, as mentioned above. Therefore, comparisons across the replications of the data for the same taster will be made under similar internal conditions. Not identical, but similar. 
+In particular, this design will not require identifying individual taster ability (non-tasters vs super tasters), which will reduce costs for the that test and mean that comparisons of the group means across tasters will be less impacted by the taster ability.  
+Because the tasters each receive all combinations of the factors in each replication, this makes the taster the experimental unit, as well as the locally controlled block. 
+
+
+# Blocking.
+
+Blocking is a means to implement local control. Given that local control is achieved by the within-subject design pattern, blocking has been achieved with tasters being the blocking factor. 
+Given the randomisation of treatment conditions, and the number of times each treatment condition appears in each block is equal, this experiment achieves randomised complete block design.
+Tasters are the blocks. Which means that the analysis of the data will need to be done using a mixed effect model where tasters are the random effect. 
+
+Because each block is homogenous and gets all treatments each replication in a random order, this experiment is a repeated, randomised complete block design of a full factorial experiment.  
+The benefit of this is that the replication does not need to be included in the model as a potential source of variation. 
+
+# Number of sample units required.
+
+In order to balance cost (primarily payment to tasters), time and statistical validity of the experiment, sample size is an important consideration. 
+
+Yoon et al (2025), who had the most similar design to this one, had eight trained tasters.
+Nash et al (2025) used 84 participants using both hedonic and rate-all-that-apply scales.
+Yoo et al (2026) sampled 145 people at 12 events aimed at crafters.  
+
+In this experiment the sample size could be as low as 8, based off the most similar study above. Assuming Lehr's rule $$\Delta = \frac{4}{\sqrt{n}}$$ then a sample size of 8 would result in an effect size of 1.41. This could be enhanced if all tasters were trained at discerning tastes. 
+Not assuming this, in order to achieve an effect size of 1 standard deviation between the means in intensity of taste between the two vegetables, 16 is a typical sample size. 
+The studies above, assuming no impact from taster skill, have effect sizes of 1.41, 0.44 and 0.4 respectively using Lehr's rule. 
+
+A lower effect size may be useful to detect subtle variances in taste intensity. For an effect size of 0.5, 64 tasters are required. 
+
+All this aside, the experiment is complex and requires decent space to conduct. Three rooms minimum; a waiting room and one room staged with sensory queues for each vegetable. Large sample sizes are not practical in this experiment. 
+
+Replication will increase the precision of the estimates for the effect size. Meaning that a lower number of participants may be required. 
+Using an ANOVA analysis on the within subject replication means the repeated observations can be leveraged for higher accuracy of the main effects estimates, within subject. 
+
+Assuming an effect size of 1 is the target, power of 80% and a sample of 16 as the base line, then due to the replication designed into the experiment, less than 16 participants may be required. 
+On this assumption (without using specialised tools in R), this experiment will use 12 participants.
+
+12 participants measured 4 times each replication means 48 tastings. Given two rooms and thus two concurrent tastings, this means 24 concurrent tasting trials. At roughly seven minutes per trial (including resetting the space between trials), that makes each replicate require approximately three hours. 
+$$(7 * 48) / 2 = 168$$
+168 minutes is appropriately three hours. 
+
+Five replications means fifteen hours overall. If this is spread over five days, or one working week at the same time each day, the experiment will be straight forward to run.
+
+
+# Ethics required. 
+
+This experiment will require ethics approval because people are tasting the food. An ethics application will need to be made to the first ethics committee: the ethics committee with particular expertise in health, nutrition and exercise.
+Additionally, because the experiment closely follows the Yoon et al (2025) experiment, this experiment would not be harmed by following the Declaration of Helsinki, as Yoon's and Nash's studies did. 
+
+# Covariates.
+
+There are two covariates in this experiment. 
+
+1. *Taster hunger prior to the trial*. Hunger increases taste intensity. _"Empirically, during hunger state, humans find ordinary food more attractive and feel less aversion to food they usually dislike."_ (Fu et al, 2021). Here is a variable that could directly confound the measurement of flavour intensity. Particularly as the experiment lasts for three hours at each replication, and the later tasters will likely be more hungry. Therefore, it is necessary to identify taster hunger prior to each trial. This will be done by asking participants to rate their hunger on a 9 point scale, with 1 being not hungry and 9 being very hungry. Using the same scale as the main effect of interest will make analysis simpler as it is already a statistically sensible measurement. 
+
+2. The second covariate is the *puree batch*. Because the replications will cause the experiment to last five days, and because flavour can deteriorate over time as flavour molecules oxidise, the puree needs to be made fresh each day. As any chef will attest, ingredient quality varies with the batch and this can affect the final outcome. While within subject differences are accounted for, slight variations in ingredient quality or preparation can still confound the result. However, this has been controlled for because of the RCBD with replication. Therefore, puree batch doesn't need to be included. If there is a suspicion that it may be causing an issue (vastly different taste or spoiled product), then the replication is a proxy for the batch, due to it being prepared daily. 
+
+
+# Data worksheet set up.
+
+
+
+```{r MyDataSetup}
+set.seed(21)
+
+levels <- c("Celeriac", "Parsnip")
+tasters <- 1:12
+replication <- 1:5 #replication & puree batch are the same
+
+#set up the factors and meta data first, then set up the covariate and response variable as normal distributed values with min at 1 and max at 9. Integers only, no floats. This data will model some interesting possibilities in the data, rather than simply random.
+MyData <- as.data.frame(
+  expand.grid(Replication = replication, Queue = levels, Primer = levels, TasterID = tasters ) %>%
+  group_by(TasterID, Replication) %>%
+  mutate(Trial_Order = sample(1:n())) %>%
+  ungroup() %>%
+  arrange(Replication, TasterID) %>%
+  mutate(
+    Hunger = pmin(9, pmax(1, as.integer(round(scale(rnorm(n(), mean = 5, sd = 2)) * 2 + 5)))),
+    
+    #create base values for intensity
+    Celeriac_Intensity_Base = round(pmin(9, pmax(1, rnorm(n(), mean = 5, sd = 1.5) * 0.3 + Hunger * 0.7))),
+    Parsnip_Intensity_Base = round(pmin(9, pmax(1, rnorm(n(), mean = 6, sd = 2) * 0.2 + Hunger * 0.6))), #playing with the distribution to show differences in graph
+    
+    #model increased/decreased intensity based on queue or primer in a random, uniform way
+    Celeriac_Boost = ifelse(Primer == 'Celeriac', runif(1, min = 0, max = 1), runif(1, min = -0.5, max = 0)) + ifelse(Queue == 'Celeriac', runif(1, min = 0, max = 1), runif(1, min = -0.5, max = 0)),
+    Parsnip_Boost = ifelse(Primer == 'Parsnip', runif(1, min = 0, max = 1), runif(1, min = -0.5, max = 0)) + ifelse(Queue == 'Parsnip', runif(1, min = 0, max = 1), runif(1, min = -0.5, max = 0)), 
+    
+    #apply boosting effect to base values to get flavour, with random, uniform boost
+    Celeriac_Flavour = round(pmin(9, Celeriac_Intensity_Base + Celeriac_Boost * runif(1, min = 0, max = 1.5))),
+    Parsnip_Flavour = round(pmin(9, Parsnip_Intensity_Base + Parsnip_Boost * runif(1, min = 0, max = 1.5))),
+    
+    #apply boosting effect to base values to get aroma with random, uniform boost. Altering the base avoid perfect correlation with flavour
+    Celeriac_Aroma = round(pmin(9, (Celeriac_Intensity_Base * runif(1, min = 0.5, max = 2)) + Celeriac_Boost * runif(1, min = 0, max = 2))),
+    Parsnip_Aroma = round(pmin(9, (Parsnip_Intensity_Base * runif(1, min = 0.5, max = 2)) + Parsnip_Boost * runif(1, min = 0, max = 2))),
+    
+    #make other variables into factors
+    TasterID = as.factor(TasterID),
+    Queue = as.factor(Queue),
+    Primer = as.factor(Primer), 
+    Replication = as.factor(Replication),
+    ID = paste0(Replication, TasterID, Trial_Order)
+    ) %>%
+  select(-Celeriac_Intensity_Base, -Parsnip_Intensity_Base, -Celeriac_Boost, -Parsnip_Boost) %>%
+  select(ID, Replication, TasterID, Trial_Order, everything()) 
+  )
+
+write.csv(MyData, file="MyData.csv", row.names=FALSE)
+```
+
+`r xfun::embed_file("MyData.csv")`
+
+```{r}
+MyData %>% head()
+```
+
+
+## Graphs and tables.
+
+
+The first set of graphs will explore if there is a pattern between mean hunger and mean perceived intensity by taster (block). These will be repeated across all four response variables. A table will be presented with the graph. 
+
+```{r graph 1}
+MyData %>% 
+  group_by(Replication, TasterID) %>% 
+  summarise(Celeriac_Flavour = mean(Celeriac_Flavour), Celeriac_Aroma = mean(Celeriac_Aroma),
+            Parsnip_Flavour = mean(Parsnip_Flavour), Parsnip_Aroma = mean(Parsnip_Aroma),
+            Hunger = mean(Hunger), .groups = 'drop') %>%
+  ggplot(aes(y=Celeriac_Flavour, x = Hunger, col = TasterID)) + 
+  geom_point() +
+  geom_line() +
+  geom_abline(intercept = 0, slope = 1, linetype = 'dashed') +
+  scale_x_continuous(limits = c(1, 9), breaks = seq(1, 9, by = 1)) +
+  scale_y_continuous(limits = c(1, 9), breaks = seq(1, 9, by = 1)) +
+  labs(y = 'Percieved Celeriac Intensity', x = "Percieved Hunger", title = "Relationship between Hunger and Percieved Celeriac Flavour Intensity") +
+  theme_minimal()
+
+
+```
+```{r graph 1 table}
+MyData %>% 
+  group_by(Replication, TasterID) %>% 
+  summarise(Celeriac_Flavour = mean(Celeriac_Flavour), Celeriac_Aroma = mean(Celeriac_Aroma),
+            Parsnip_Flavour = mean(Parsnip_Flavour), Parsnip_Aroma = mean(Parsnip_Aroma),
+            Hunger = mean(Hunger), .groups = 'drop') %>%
+  kable()
+```
+
+
+
+
+The second set of graphs will show hunger's impact on mean perceived intensity in order to identify if there is a clear trend between the treatment combinations. The graph below will be replicated across each response variable. A table, like that below, will be presented with the graphs. 
+
+```{r}
+mean_df <- MyData %>%
+  group_by(interaction(Queue, Primer), Hunger) |>
+  summarise(meanCount =mean(as.integer(Celeriac_Flavour)), .groups = 'drop') %>% rename(Interaction = `interaction(Queue, Primer)`)
+
+MyData %>% 
+  ggplot(aes(y = Celeriac_Flavour, x = Hunger, col = interaction(Queue, Primer))) + geom_point() +
+  geom_line(data= mean_df, aes(y=meanCount, x = Hunger, group = Interaction, col = Interaction)) +
+  labs(title = "Mean Celeriac Flavour Intensity as hunger increases", subtitle="With mean celeriac intensity as line",col = 'Interaction', y = 'Mean Celeriac Intensity') +
+  scale_y_continuous(limits = c(1, 9), breaks = seq(1, 9, by = 1)) +
+  scale_x_continuous(limits = c(1, 9), breaks = seq(1, 9, by = 1)) +
+  theme_minimal()
+
+```
+
+```{r}
+mean_df %>% pivot_wider(
+    names_from = Hunger,
+    values_from = meanCount) %>% kable()
+```
+
+
+
+The third set of graphs will be box plots showing the distribution of the response variables by the treatments combinations. Alongside each graph, a table with the data will be presented. Like the one shown below. The graph and table below will be replicated for each response variable. 
+
+```{r box plot, fig.height=6}
+MyData %>% 
+  ggplot(aes(x = TasterID, y = Celeriac_Flavour, color = interaction(Primer, Queue))) +
+  geom_boxplot() +
+  labs(title = "Perceived Celeriac Intensity by factor order",x = "Taster ID", y = "Perceived Celeriac Intensity", color = "Primer & Queue") +
+  scale_y_continuous(limits = c(1, 9), breaks = seq(1, 9, by = 1)) +
+  theme_minimal()
+```
+
+```{r boxplot table}
+MyData %>%
+  group_by(TasterID) %>%
+  summarise(
+    Minimum = min(Celeriac_Flavour), 
+    Q1 = quantile(Celeriac_Flavour, 0.25),
+    Average = mean(Celeriac_Flavour), 
+    Q3 = quantile(Celeriac_Flavour, 0.75),
+    Maximum = max(Celeriac_Flavour), 
+    .groups = 'drop') %>%
+  kable()
+
+```
+
+
+
+
+Finally, a series of matrices will be shown that detail the mean perceived intensity of flavour or aroma under the treatment conditions. This matrix will be replicated for each reponse variable. 
+
+```{r matrix}
+# thi first part creates the required table for all response variables. 
+response_vars <- c("Celeriac_Flavour","Parsnip_Flavour", "Celeriac_Aroma", "Parsnip_Aroma")
+
+Matrix_list <- lapply(response_vars, function(var) {
+  formula <- as.formula(paste(var, "~ Queue + Primer"))
+  means <- tapply(MyData[[var]], list(MyData$Queue, MyData$Primer), mean)
+  as.data.frame(as.matrix(means)) %>%
+    rownames_to_column("Queue") %>%
+    pivot_longer(-Queue, names_to = "Primer", values_to = paste0("Mean_", var))
+})
+
+# Combine all into one datafrfame for easy plotting
+Matrix_df <- Matrix_list %>%
+  reduce(left_join, by = c("Queue", "Primer"))
+
+
+ggplot(Matrix_df, aes(x = Primer, y = Queue, fill = Mean_Celeriac_Flavour)) +
+  geom_tile() +
+  geom_text(aes(label = round(Mean_Celeriac_Flavour, 2)), color = "black") +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  labs(title = "Celeriac Flavour by Queue and Primer",
+       x = "Primer", y = "Queue", fill = "Mean Flavour") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+
+## Initial Model.
+
+
+The initial model for celeriac flavour includes hunger as a covariate and the interaction between the two treatments with TasterID as a random effect. 
+
+```{r model}
+#beacuse we havea  RCBD with repeats on the blocks, replication doesn't need to be a factor in the model
+model.lme1 = lme(Celeriac_Flavour ~ Hunger + Queue*Primer, random= ~1|TasterID, MyData) # each taster has their own baseline flavour score shifted up or down form the population mean, with random intercept. Slop coefficients are the same
+model.lme1 %>% anova()
+```
+
+Next the coefficients will be viewed for the model. Note the factor level for 'celeriac' is taken as the base value. 
+
+```{r coefs}
+model.lme1 %>% coef() #in the model only random intercepts were specified. SO the slope coefficients are the same
+
+```
+
+This will be followed by a look at the pair wise comparisons of estimated marginal means for all combinations of the treatments. 
+
+```{r emmans}
+model.lme1 %>% emmeans(c("Queue", "Primer")) %>% 
+pairs(adjust = "tukey")  %>% confint()
+```
+```{r emmeans plot}
+plot(emmeans(model.lme1, ~ Queue*Primer), adjust = "tukey")
+```
+
+Lastly, the model's interactions effects and predicted values will be observed. FrF2 does not support lme models. The sjPlot library has been used instead as it does support mixed effect models (Ludecke, 2026). 
+
+```{r interactions effects, warning = FALSE}
+#https://strengejacke.github.io/sjPlot/reference/plot_model.html, accessed 2026
+sjPlot::plot_model(model.lme1, type = "est") #fixed effect estimates
+sjPlot::plot_model(model.lme1, type = "eff", terms = "Queue") 
+sjPlot::plot_model(model.lme1, type = "eff", terms = "Primer")
+sjPlot::plot_model(model.lme1, type = "int")
+```
+
+
+
+
+## Model validation
+
+The model will be validated by visually observing the residual plots. Because the mixed effects model does not have support for the plot() function to view other graphs than the residuals vs fitted, the gglm library will be used to view the qq plot and the scale location plot (White, 2026). 
+
+```{r residuals vs fitted}
+ggplot(model.lme1, aes(col = TasterID)) + stat_fitted_resid()
+```
+
+
+
+
+```{r residuals by group}
+plot(model.lme1, resid(., type = "p") ~ fitted(.) | TasterID, abline = 0)
+```
+
+```{r normality}
+ggplot(model.lme1) + stat_normal_qq()
+```
+
+
+```{r scale location}
+ggplot(model.lme1, aes(col = TasterID)) + stat_scale_location()
+```
+
+
+
+
+# Time budget.
+
+
+The five replications will take place over the course of five working days. 
+There are five roles required. Multiple roles could be held by the same person, except the researcher role cannot be involved in communication with the tasters and the tasters only taste. In order to ensure no bias enter the analysis. 
+
+**Roles:**
+
+| Role           | Task                                                                           |
+|----------------|--------------------------------------------------------------------------------|
+|Cook            | Collect ingredients, prepare and portion puree.                                |
+|Setup           | stage the two rooms with visual queues and reset the rooms between each trial. | 
+|Coordinator     | Brief tasters, manage schedule and costs                                       |
+|Data technician | Compile the data from the trials and ensure data quality.                      |
+|Researcher      | Conduct the research of the data.                                              |
+|Taster          | Sample the puree and record their values for intensity and hunger              |
+
+**Tasks:** 
+
+|Day  | Time | Task                 | Assigned To     |
+|-----|------|----------------------|-----------------|
+| 01  | 0800 | Collect ingredients  | Cook            |
+| 01  | 0900 | Cook Puree           | Cook            |
+| 01  | 0930 | Cool puree           | Cook            |
+| 01  | 0930 | Arrange rooms        | Setup           |
+| 01  | 1245 | Brief tasters*       | Coordinator     |
+| 01  | 1230 | Reheat Puree         | Cook            |
+| 01  | 1245 | Portion Puree        | Cook            |
+| 01  | 1300 | Start experiment     | Coordinator     |
+| 01  | 1600 | Experiment end       | Coordinator     |
+| 01  | 1605 | Clean rooms          | Setup           |
+| 01  | 1630 | Compile data         | Data technician |
+| 02  | 0900 | Cook Puree           | Cook            |
+| 02  | 0930 | Cool puree           | Cook            |
+| 02  | 0930 | Arrange rooms        | Setup           |
+| 02  | 1230 | Reheat Puree         | Cook            |
+| 02  | 1245 | Portion Puree        | Cook            |
+| 02  | 1300 | Start experiment     | Coordinator     |
+| 02  | 1600 | Experiment end       | Coordinator     |
+| 02  | 1605 | Clean rooms          | Setup           |
+| 02  | 1630 | Compile data         | Data technician |
+| 03  | 0900 | Cook Puree           | Cook            |
+| 03  | 0930 | Cool puree           | Cook            |
+| 03  | 0930 | Arrange rooms        | Setup           |
+| 03  | 1230 | Reheat Puree         | Cook            |
+| 03  | 1245 | Portion Puree        | Cook            |
+| 03  | 1300 | Start experiment     | Coordinator     |
+| 03  | 1600 | Experiment end       | Coordinator     |
+| 03  | 1605 | Clean rooms          | Setup           |
+| 03  | 1630 | Compile data         | Data technician |
+| 04  | 0800 | Collect ingredients**| Cook            |
+| 04  | 0900 | Cook Puree           | Cook            |
+| 04  | 0930 | Cool puree           | Cook            |
+| 04  | 0930 | Arrange rooms        | Setup           |
+| 04  | 1230 | Reheat Puree         | Cook            |
+| 04  | 1245 | Portion Puree        | Cook            |
+| 04  | 1300 | Start experiment     | Coordinator     |
+| 04  | 1600 | Experiment end       | Coordinator     |
+| 04  | 1605 | Clean rooms          | Setup           |
+| 04  | 1630 | Compile data         | Data technician |
+| 05  | 0900 | Cook Puree           | Cook            |
+| 05  | 0930 | Cool puree           | Cook            |
+| 05  | 0930 | Arrange rooms        | Setup           |
+| 05  | 1230 | Reheat Puree         | Cook            |
+| 05  | 1245 | Portion Puree        | Cook            |
+| 05  | 1300 | Start experiment     | Coordinator     |
+| 05  | 1600 | Experiment end       | Coordinator     |
+| 05  | 1605 | Clean rooms          | Setup           |
+| 05  | 1630 | Compile data         | Data technician |
+| 05  | 1700 | Quality check data   | Data technician |
+| 05  | 1800 | Create data frame    | Data technician |
+| 06  | 0830 | Begin analysis       | Researcher      |
+
+$*$ at this point tasters get a TasterID which they keep for the whole five days.  
+
+$**$ optional task dependent on supplies.  
+
+**In trial tasks**
+
+This assumes there are two rooms for tasting and two for priming.  
+There may be more, or there could be tasting booths. More space means faster trials.  
+When tasters enter the room there will be a paper survey labelled with the ID for the trial they are about to do. It has three places to enter data. One for Hunger and two for the perceived intensities of the puree flavours.  
+When they leave the room they will deposit this into a sealed box.  
+This survey is on the table with a pencil, eraser and the puree ready for tasting in a disposable plastic cup with a disposable plastic spoon. When the researcher in charge of setup 'resets' the room, they will be placing the next portion and survey paper on the table in the exact same place as before. As well as cleaning any mess created with a wet towel and immediately drying the table. No cleaning product is used between tastings, as this will leave a lingering smell. Only at the end of the day is the room properly cleaned.  
+Additionally, the table will be decorated with the visual queue for the room, either parsnip or celeriac.
+
+
+|Day  | Time    | Task                         | Assigned To     |
+|-----|---------|------------------------------|-----------------|
+|Day  | 2 min   | Prime tasters 1 & 2          | Coordinator     |
+|Day  | 0.5 min | Lead tasters 1 & 2 to rooms  | Coordinator     |
+|Day  | 0.5 min | Record perceived hunger      | Taster          |
+|Day  | 1 min   | Taste puree                  | Taster          |
+|Day  | 0.5 min | Record perceived intensities | Taster          |
+|Day  | 0.5 min | Leave room, deposit data     | Taster          |
+|Day  | 2   min | reset room & puree           | Setup  & Cook   |
+
+Under this plan, each replication of the experiment will take about 168 minutes to complete.  
+The run sheet for each day assumes three hours for the experiment. This leaves 12 minutes spare in case there is an unexpected delay due to mess or mistake. 
+
+---
+
+# Materials and Methods.
+
+
+
+## Participants
+Twelve participants (x men, y women, average age $\overline{x}$ $\pm$ z) were recruited from Massey University, Palmerston North, New Zealand. The participants were included if they were non-smokers, non-vapers, were not pregnant nor breastfeeding, were not taking any medications that impacted taste or smell, had no allergies that excluded them from this experiment and if they had no problems with swallowing food. Each taster gave written informed consent before participating in the study and the study was approved by the Massey University ethics board. This study was conducted in accordance with the regulations outlined in the declaration of Helsinki (2013). Participant identified their age and sex. Participants were paid to be part of this study. 
+
+## Puree sample preparation
+
+Celeriac and parsnip was obtained from a local food supplier on the first day of the experiment. Ingredients were stored in a refrigerator at 5 degrees celcius until used for puree preparation. The puree was prepared each day at 9 in the morning. The vegetables were weighed out in equal amounts, peeled and cut into uniform sized cubes, then boiled in unsalted tap water. When the vegetables were soft, they were pureed using a high powered blender until smooth, then passed through a sieve to ensure a smooth consistency. The puree was cooled to 5 degrees celcius then stored in the refrigerator. 
+At 12:30 the puree was removed from the refrigerator and heated up to above 60 degrees while stirring to avoid scorching. Then portioned into odourless plastic cups with odourless plastic spoons for the experiment just prior to the tasting. The cook remained on hand to portion the puree for each trial in order to ensure the temperature of the puree was constant for all trials. Each puree portion was 100g. 
+
+## Tasting procedure.
+On the first day at 12:45 the 12 tasters were briefed on how to complete the survey using a 1-9 scale for taste, aroma and hunger (1 = none, 9 = very strong). They were to first enter their hunger rates then enter the aroma rating, taste the puree and then enter the flavour rating. A glass of cool water was provided for each trial so the taster could cleanse their palate after tasting. Tasters were given an ID from 1 to 12 to identify them in the data. 
+
+A within-subject, repeated-measures 2 x 2 factorial design was used with factors primer (Cleriac, Parsnip) and queue (Celeriac, Parsnip); all tasters received all four conditions in a randomised order. Each trial took place between two areas. The first area for the taster to be primed with one vegetable by holding and observing the vegetable; feelings, seeing and smelling it. Then they are led to one of two tasting areas set-up for the second factor. In the second area the vegetable of the second factor was placed on the table as a visual queue. Tasters then followed the procedure:
+
++ Observe the room.
++ Record their perceived hunger. 
++ Smell the puree (which was warm and aromatic).
++ Record the perceived aroma intensity of the puree's ingredients. 
++ Taste the puree.
++ Record the perceived flavour intensity of the two flavours. 
++ Cleanse their palate with water. 
++ Leave the room and deposit their survey in a sealed box. 
+
+Each trial is then reset with new survey, new puree and new water. The rooms were cleaned between each trial using only a warm, wet cloth and a towel to dry, so that no cleaning product aroma interfered with the trial. The survey completed is pre-labelled with a unique key identifying the taster and their trial order, in order to make compiling the data possible. 
+Five replications were made of the experiment using the same five tasters over five days. Each day the order of the factors was randomised and unknown to the taster until the start of the trial.  
+
+## Statistical Analysis.
+
+Data analysis was performed using R software by Posit. Mean intensity ratings of celeriac aroma intensity, parsnip aroma intensity, celeriac flavour intensity and parsnip flavour intensity were compared across treatments by one-way ANOVA with the taster as a random effect. 
+
+
+# References:
+
++ Fu, O., Minokoshi, Y., Nakajima, K. (2021). Recent Advances in Neural Circuits for Taste Perception in Hunger. _Front. Neural Circuits 15_(1). https://doi.org/10.3389/fncir.2021.609824.
+
++ Jiang, R.S., Chiang, Y.F. (2023). Effect of Age and Gender on Taste Function as Measured by the Waterless Empirical Taste Test. _Diagnostics 13_(20), 3172. https://doi.org/10.3390/diagnostics13203172.
+
++ Kim, T., Cho, Y. (2026). How A Cool Scent Sharpens the Mind: The Effect of Thermal Olfactory Cues on Performance. _Journal of Sensory Studies. 41_(1).  https://doi.org/10.1111/joss.70103.
+
++ Liu, D., Deng, Y., Sha, L., Hashem, A., Gai, S. (2017). Impact of oral processing on texture attributes and taste perception. _Journal of Food Science and Technology 54_(1), P2585-2593. https://doi.org/10.1007/s13197-017-2661-1.
+
++ Ludecke, D. (2026, March 29). _Plot regression models_. sjPlot. https://strengejacke.github.io/sjPlot/reference/plot_model.html.
+
++ Nash, D., Sloan, G., Code, M., Power, B., McSweeny, M.B. (2025). The Cross-Modal Interaction of White Pepper Included in a Bread Formulation: An Investigation Using Hedonic Scales and Rate-All-That-Apply. _Journal of Sensory Studies. 40_(6). https://doi.org/10.1111/joss.70084.
+
++ Sidel, J.L., Bleibaum, R.N., Tao, C.K.W. (2018). Quantitative Descriptive Analysis. _Descriptive Analysis in Sensory Evaluation. In S.E. Kemp, J. Hort & T. Hollowood (Eds.), _Descriptive Analysis in Sensory Evaluation_ (pp287-318). John Wiley & Sons Ltd.
+
++ White, G. (2026, March 29). _gglm_. Cran. https://cran.r-project.org/web/packages/gglm/readme/README.html 
+
++ Yoon, G., Jung, H., Oh, J. (2025). Influence of Temperature and Lemon Solutions on Palate Cleansing for Sensory Evaluation of Atlantic Salmon. _Journal of Sensory Studies. 40_(6). https://doi.org/10.1111/joss.70084.
